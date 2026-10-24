@@ -9,6 +9,8 @@
 
 #define INSIDE_FSTRING(tok) (tok->tok_mode_stack_index > 0)
 #define INSIDE_FSTRING_EXPR(tok) (tok->curly_bracket_expr_start_depth >= 0)
+#define INSIDE_FSTRING_EXPR_AT_TOP(tok) \
+    (tok->curly_bracket_depth - tok->curly_bracket_expr_start_depth == 1)
 
 enum decoding_state {
     STATE_INIT,
@@ -59,9 +61,10 @@ typedef struct _tokenizer_mode {
     Py_ssize_t start_offset;
     Py_ssize_t multi_line_start_offset;
 
-    Py_ssize_t last_expr_size;
-    Py_ssize_t last_expr_end;
-    char* last_expr_buffer;
+    /* Points into tok->buf, which is retained while INSIDE_FSTRING(tok). */
+    const char* last_expr_start;
+    Py_ssize_t last_expr_start_offset;
+
     int in_debug;
     int in_format_spec;
 
@@ -100,6 +103,7 @@ struct tok_state {
     int parenlinenostack[MAXLEVEL];
     int parencolstack[MAXLEVEL];
     PyObject *filename;
+    PyObject *module;
     /* Stuff for checking on different tab sizes */
     int altindstack[MAXINDENT];         /* Stack of alternate indents */
     /* Stuff for PEP 0263 */
@@ -134,6 +138,7 @@ struct tok_state {
 #ifdef Py_DEBUG
     int debug;
 #endif
+    int barry_as_bdfl;
 };
 
 int _PyLexer_type_comment_token_setup(struct tok_state *tok, struct token *token, int type, int col_offset,

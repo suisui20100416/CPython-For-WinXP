@@ -75,11 +75,11 @@
             <Group>lib_py</Group>
             <IncludeInCat>false</IncludeInCat>
         </InstallFiles>
-        <InstallFiles Include="$(OutDir)Lib\site-packages\pip-25.2.dist-info\**\*">
-            <SourceBase>$(OutDir)Lib\site-packages\pip-25.2.dist-info</SourceBase>
-            <Source>!(bindpath.build)Lib\site-packages\pip-25.2.dist-info\</Source>
-            <TargetBase>$(OutDir)Lib\site-packages\pip-25.2.dist-info</TargetBase>
-            <Target_>Lib\site-packages\pip-25.2.dist-info\</Target_>
+        <InstallFiles Include="$(OutDir)Lib\site-packages\pip-26.2.1.dist-info\**\*">
+            <SourceBase>$(OutDir)Lib\site-packages\pip-26.2.1.dist-info</SourceBase>
+            <Source>!(bindpath.build)Lib\site-packages\pip-26.2.1.dist-info\</Source>
+            <TargetBase>$(OutDir)Lib\site-packages\pip-26.2.1.dist-info</TargetBase>
+            <Target_>Lib\site-packages\pip-26.2.1.dist-info\</Target_>
             <Group>lib_py</Group>
             <IncludeInCat>false</IncludeInCat>
         </InstallFiles>

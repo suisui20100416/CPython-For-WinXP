@@ -854,6 +854,22 @@ class SelectorSocketTransportTests(test_utils.TestCase):
         self.assertTrue(self.sock.send.called)
         self.assertTrue(self.loop.writers)
 
+    def test_writelines_after_connection_lost(self):
+        # GH-136234
+        transport = self.socket_transport()
+        self.sock.send = mock.Mock()
+        self.sock.send.side_effect = ConnectionResetError
+        transport.write(b'data1')  # Will fail immediately, causing connection lost
+
+        transport.writelines([b'data2'])
+        self.assertFalse(transport._buffer)
+        self.assertFalse(self.loop.writers)
+
+        test_utils.run_briefly(self.loop)  # Allow _call_connection_lost to run
+        transport.writelines([b'data2'])
+        self.assertFalse(transport._buffer)
+        self.assertFalse(self.loop.writers)
+
     @unittest.skipUnless(selector_events._HAS_SENDMSG, 'no sendmsg')
     def test_write_sendmsg_full(self):
         data = memoryview(b'data')
@@ -1105,6 +1121,49 @@ class SelectorSocketTransportTests(test_utils.TestCase):
 
         self.assertEqual(transport.get_write_buffer_size(), 0)
         self.assertTrue(self.protocol.connection_lost.called)
+
+    def test_write_ready_resume_writing_closes(self):
+        # gh-156512: closing from resume_writing() must not lose the connection twice
+        self.sock.send.return_value = 2
+
+        def _resume_writing():
+            transport.close()
+
+        self.protocol.resume_writing.side_effect = _resume_writing
+        self.loop.call_exception_handler = mock.Mock()
+
+        transport = self.socket_transport()
+        transport.set_write_buffer_limits(high=1, low=0)
+        transport.write(b'data')
+
+        self.loop.writers[7]._run()
+        test_utils.run_briefly(self.loop)
+
+        self.assertEqual(self.protocol.connection_lost.call_count, 1)
+        self.loop.call_exception_handler.assert_not_called()
+
+    @unittest.skipUnless(selector_events._HAS_SENDMSG, 'no sendmsg')
+    def test_write_sendmsg_resume_writing_closes(self):
+        # gh-156512: same as above, for the sendmsg write path
+        self.sock.send.return_value = 2
+        self.sock.sendmsg.return_value = 2
+
+        def _resume_writing():
+            transport.close()
+
+        self.protocol.resume_writing.side_effect = _resume_writing
+        self.loop.call_exception_handler = mock.Mock()
+
+        transport = self.socket_transport(sendmsg=True)
+        transport.set_write_buffer_limits(high=1, low=0)
+        transport.write(b'data')
+
+        self.loop.writers[7]._run()
+        test_utils.run_briefly(self.loop)
+
+        self.assertEqual(self.protocol.connection_lost.call_count, 1)
+        self.loop.call_exception_handler.assert_not_called()
+
 
 class SelectorSocketTransportBufferedProtocolTests(test_utils.TestCase):
 
@@ -1496,6 +1555,47 @@ class SelectorDatagramTransportTests(test_utils.TestCase):
         self.assertEqual(transport._conn_lost, 1)
         transport.sendto(b'data', (1,))
         self.assertEqual(transport._conn_lost, 2)
+
+    def test_sendto_sendto_ready(self):
+        data = b'data'
+
+        # First queue up the buffer by having the socket blocked
+        self.sock.sendto.side_effect = BlockingIOError
+        transport = self.datagram_transport()
+        transport.sendto(data, ('0.0.0.0', 12345))
+        self.loop.assert_writer(7, transport._sendto_ready)
+        self.assertEqual(1, len(transport._buffer))
+        self.assertEqual(transport._buffer_size, len(data) + transport._header_size)
+
+        # Now let the socket send the buffer
+        self.sock.sendto.side_effect = None
+        transport._sendto_ready()
+        self.assertTrue(self.sock.sendto.called)
+        self.assertEqual(
+            self.sock.sendto.call_args[0], (data, ('0.0.0.0', 12345)))
+        self.assertFalse(self.loop.writers)
+        self.assertFalse(transport._buffer)
+        self.assertEqual(transport._buffer_size, 0)
+
+    def test_sendto_sendto_ready_blocked(self):
+        data = b'data'
+
+        # First queue up the buffer by having the socket blocked
+        self.sock.sendto.side_effect = BlockingIOError
+        transport = self.datagram_transport()
+        transport.sendto(data, ('0.0.0.0', 12345))
+        self.loop.assert_writer(7, transport._sendto_ready)
+        self.assertEqual(1, len(transport._buffer))
+        self.assertEqual(transport._buffer_size, len(data) + transport._header_size)
+
+        # Now try to send the buffer, it will be added to buffer again if it fails
+        transport._sendto_ready()
+        self.assertTrue(self.sock.sendto.called)
+        self.assertEqual(
+            self.sock.sendto.call_args[0], (data, ('0.0.0.0', 12345)))
+        self.assertTrue(self.loop.writers)
+        self.assertEqual(1, len(transport._buffer))
+        self.assertEqual(transport._buffer_size, len(data) + transport._header_size)
 
     def test_sendto_ready(self):
         data = b'data'

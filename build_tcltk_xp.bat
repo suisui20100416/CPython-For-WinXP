@@ -22,8 +22,6 @@ set "LIB=%SDK10%\Lib\%UCRTVER%\ucrt\x86;%SDK71A%\Lib;%LIB%"
 set "WindowsSDKDir_71A=%SDK71A%\"
 set "VCINSTALLDIR=%VSROOT17%\VC"
 
-REM Build-assist interpreter; PYEXE overrides it (see README.md).
-if not defined PYEXE set "PYEXE=py"
 set "SRC=%~dp0."
 set "TCLSRC=%~dp0externals\tcl-9.0.4.0"
 set "TKSRC=%~dp0externals\tk-9.0.4.1"
@@ -94,7 +92,7 @@ if errorlevel 1 (echo [tcltk] compile tkappinit FAILED & type "%OBJDIR%\tkinter_
 cd /d "%OUT%"
 link /nologo /dll /machine:x86 /subsystem:windows,5.1 /out:%OUT%\_tkinter.pyd ^
   %OUT%\_tkinter.obj %OUT%\tkappinit.obj ^
-  %OUT%\python314.lib ^
+  %OUT%\python315.lib ^
   "%TCLTK%\lib\tcl90.lib" "%TCLTK%\lib\tcl9tk90.lib" "%TCLTK%\lib\tommath.lib" ^
   kernel32.lib user32.lib gdi32.lib advapi32.lib shell32.lib ole32.lib ws2_32.lib comdlg32.lib comctl32.lib uuid.lib imm32.lib winspool.lib oleaut32.lib netapi32.lib userenv.lib 1>>"%OBJDIR%\tkinter_build.log" 2>&1
 if errorlevel 1 (echo [tcltk] link _tkinter FAILED & type "%OBJDIR%\tkinter_build.log" & exit /b 1)
@@ -114,9 +112,9 @@ REM the 11-test build was 16827306 bytes instead of 18163319 and still
 REM passed on the test machine via leftover tcl\tcl9.0 from an install).
 rd /s /q "%OBJDIR%\tcllib" 2>nul
 rd /s /q "%OBJDIR%\tklib" 2>nul
-"%PYEXE%" -m zipfile -e "%TCLTK%\lib\libtcl9.0.4.zip" "%OBJDIR%\tcllib"
+py -m zipfile -e "%TCLTK%\lib\libtcl9.0.4.zip" "%OBJDIR%\tcllib"
 if errorlevel 1 (echo [tcltk] extract libtcl zip FAILED & exit /b 1)
-"%PYEXE%" -m zipfile -e "%TCLTK%\lib\libtk9.0.4.zip" "%OBJDIR%\tklib"
+py -m zipfile -e "%TCLTK%\lib\libtk9.0.4.zip" "%OBJDIR%\tklib"
 if errorlevel 1 (echo [tcltk] extract libtk zip FAILED & exit /b 1)
 rd /s /q "%OUT%\DLLs\tcl" 2>nul
 rd /s /q "%OUT%\DLLs\Tk" 2>nul

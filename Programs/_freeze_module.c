@@ -45,32 +45,45 @@ static const char header[] =
 static void
 runtime_init(void)
 {
-    PyConfig config;
-    PyConfig_InitIsolatedConfig(&config);
+    PyInitConfig *config = PyInitConfig_Create();
+    if (config == NULL) {
+        printf("memory allocation failed\n");
+        exit(1);
+    }
 
-    config.site_import = 0;
-
-    PyStatus status;
-    status = PyConfig_SetString(&config, &config.program_name,
-                                L"./_freeze_module");
-    if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);
-        Py_ExitStatusException(status);
+    if (PyInitConfig_SetInt(config, "site_import", 0) < 0) {
+        goto error;
+    }
+    if (PyInitConfig_SetStr(config, "program_name", "./_freeze_module") < 0) {
+        goto error;
     }
 
     /* Don't install importlib, since it could execute outdated bytecode. */
-    config._install_importlib = 0;
-    config._init_main = 0;
+    if (PyInitConfig_SetInt(config, "_install_importlib", 0) < 0) {
+        goto error;
+    }
+    if (PyInitConfig_SetInt(config, "_init_main", 0) < 0) {
+        goto error;
+    }
 
-    status = Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
-    if (PyStatus_Exception(status)) {
+    if (Py_InitializeFromInitConfig(config) < 0) {
+        goto error;
+    }
+    PyInitConfig_Free(config);
+    return;
+
+error:
+    {
+        const char *err_msg;
         /* xp branch: print the active Python exception (if any) so runtime
          * init failures are diagnosable without a debugger. */
         if (PyErr_Occurred()) {
             PyErr_Print();
         }
-        Py_ExitStatusException(status);
+        (void)PyInitConfig_GetError(config, &err_msg);
+        printf("Python init error: %s\n", err_msg);
+        PyInitConfig_Free(config);
+        exit(1);
     }
 }
 
@@ -126,7 +139,7 @@ compile_and_marshal(const char *name, const char *text)
         return NULL;
     }
 
-    assert(Py_MARSHAL_VERSION >= 5);
+    assert(Py_MARSHAL_VERSION >= 6);
     PyObject *marshalled = PyMarshal_WriteObjectToString(code, Py_MARSHAL_VERSION);
     Py_CLEAR(code);
     if (marshalled == NULL) {

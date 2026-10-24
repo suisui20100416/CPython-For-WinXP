@@ -5,11 +5,10 @@ REM Toolchain split (measured, see Python/STAGE-C-结论.md section 8):
 REM  - The freeze tool (_freeze_module.exe) and zlib-ng.lib are *build-time*
 REM    artifacts; they do not have to run on XP. Build them with the official
 REM    v143 toolchain (VS2022 14.44.35207 + SDK 10.0.26100). v141_xp shows a
-REM    v141 codegen showed a static-type-machinery regression on 3.15
-REM    (RecursionError inside PyErr_NewException -> type_ready); keep the
-REM    official-toolchain freeze for 3.14 as well so the build recipe stays
-REM    identical across the two XP branches.
-REM  - The XP binaries (python314.dll / python.exe / pythonw.exe) are built
+REM    compiler-codegen regression with 3.15's static-type machinery
+REM    (RecursionError inside PyErr_NewException -> type_ready) -- every v141
+REM    freeze build recurses, every v143 build of identical source succeeds.
+REM  - The XP binaries (python315.dll / python.exe / pythonw.exe) are built
 REM    with v141_xp (VS2017 14.16.27023) + SDK 7.1A headers + UCRT 10.0.10240
 REM    (the XP-clean UCRT generation; measured in xp-build/tests/crt_matrix/)
 REM    + /MT static CRT + UseEnv=true so the linker takes the env LIB (7.1A +
@@ -47,7 +46,7 @@ set "OBJDIR=%~dp0build\out\obj"
 set "PCBUILD=%~dp0build\out\pcbuild"
 set "OUT=%~dp0build\out\pcbuild\win32"
 
-REM Python host for build scripts ("py" resolves to any installed 3.x
+REM Python host for build scripts ("py" resolves to any installed 3.15
 REM runtime - only drives regen and auxiliary scripts; a space-free name
 REM avoids MSBuild argument splitting). PYEXE overrides it (see README.md).
 if not defined PYEXE (set "PYTHON=py") else set "PYTHON=%PYEXE%"
@@ -88,25 +87,24 @@ echo [xp-build] step 1.5: zlib-ng (v143, /MT, static lib)...
   /p:PlatformToolset=v143 ^
   /p:RuntimeLibrary=MultiThreaded ^
   /p:WindowsTargetPlatformVersion=%SDKVER% ^
-  /p:IntDir=%OBJDIR%\314win32_Release\zlib-ng\ ^
+  /p:IntDir=%OBJDIR%\315win32_Release\zlib-ng\ ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
   2>&1
 if errorlevel 1 (echo [xp-build] zlib-ng FAILED & exit /b 1)
 
-REM zlib-ng.vcxproj normally writes the lib into $(Py_OutDir)win32
-REM (which IS the OutDir we link from); the PCbuild\win32 fallback only
-REM fires when Py_OutDir was not picked up and the default path was used.
-if not exist "%OUT%\zlib-ng.lib" echo f | xcopy /Y "%SRC%\PCbuild\win32\zlib-ng.lib" "%OUT%\" >nul
+REM zlib-ng.vcxproj writes to PCbuild\win32 regardless of Py_OutDir;
+REM mirror the lib into our OutDir where pythoncore links from it.
+echo f | xcopy /Y "%SRC%\PCbuild\win32\zlib-ng.lib" "%OUT%\" >nul
 
 REM Generate the zlib.h / zlib-ng.h / zconf.h / zlib_name_mangling.h
 REM binary headers exactly like PCbuild\zlib-ng.vcxproj's
 REM _EnsureZlibH/_EnsureZlibNgH do (replace the symbol-prefix placeholder);
 REM the project's own target does not fire reliably from this script's
 REM MSBuild invocation, so do it here.
-set "ZNGBIN=%OBJDIR%\314win32_Release\zlib-ng"
+set "ZNGBIN=%OBJDIR%\315win32_Release\zlib-ng"
 if not exist "%ZNGBIN%" mkdir "%ZNGBIN%"
 powershell -NoProfile -Command ^
   "$z=Get-Content -Raw '%EXT%\zlib-ng-2.2.4\zlib.h.in'; $z=$z.Replace('@ZLIB_SYMBOL_PREFIX@',''); [IO.File]::WriteAllText('%ZNGBIN%\zlib.h',$z,[Text.Encoding]::UTF8); " ^
@@ -114,7 +112,7 @@ powershell -NoProfile -Command ^
   "$z=Get-Content -Raw '%EXT%\zlib-ng-2.2.4\zconf.h.in'; [IO.File]::WriteAllText('%ZNGBIN%\zconf.h',$z,[Text.Encoding]::UTF8); " ^
   "$z=Get-Content -Raw '%EXT%\zlib-ng-2.2.4\zlib_name_mangling.h.in'; $z=$z.Replace('@ZLIB_SYMBOL_PREFIX@',''); [IO.File]::WriteAllText('%ZNGBIN%\zlib_name_mangling.h',$z,[Text.Encoding]::UTF8)"
 
-REM ===== Steps 2-3: XP runtime (python314.dll + python.exe + pythonw.exe) ===
+REM ===== Steps 2-3: XP runtime (python315.dll + python.exe + pythonw.exe) ===
 REM v141_xp + SDK 7.1A headers + UCRT 10240 + /MT + XPBuild=true.
 REM UseEnv=true: the linker takes the env LIB (7.1A + 10240 ucrt) instead of
 REM the registered 26100 SDK -- this is what keeps FlsAlloc & friends out of
@@ -137,17 +135,18 @@ echo [xp-build] step 2/2: pythoncore (v141_xp + 7.1A + UCRT %UCRTVER% + Py_XP)..
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
   2>&1
 if errorlevel 1 (echo [xp-build] pythoncore FAILED & exit /b 1)
 
-REM ===== Step 3.5: python3.dll stable ABI forwarder ==========================
-REM (3.15 also builds python3t.dll here; 3.14 has no python3tdll.vcxproj,
-REM so the XP 3.14 branch ships only python3.dll.)
+REM ===== Step 3.5: python3.dll / python3t.dll stable ABI forwarders =========
+REM 3.15 layout requires both (python3t.dll is the freethreaded stable
+REM forwarder; it is a pure NoEntryPoint forwarder from PC/python3dll.c, no
+REM freethreaded runtime needed for a GIL-only distribution).
 echo [xp-build] step 3.5: python3.dll (v141_xp + Py_XP)...
 "%MSBUILD17%" "%SRC%\PCbuild\python3dll.vcxproj" ^
   /t:Build ^
@@ -158,13 +157,31 @@ echo [xp-build] step 3.5: python3.dll (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
   2>&1
 if errorlevel 1 (echo [xp-build] python3.dll FAILED & exit /b 1)
+
+echo [xp-build] step 3.5: python3t.dll (v141_xp + Py_XP)...
+"%MSBUILD17%" "%SRC%\PCbuild\python3tdll.vcxproj" ^
+  /t:Build ^
+  /nologo /v:m /p:Configuration=Release /p:Platform=Win32 ^
+  /p:PlatformToolset=v141_xp ^
+  /p:WindowsTargetPlatformVersion=%SDKVER% ^
+  /p:UCRTVersion=%UCRTVER% ^
+  /p:UseEnv=true ^
+  /p:XPBuild=true ^
+  /p:ExternalsDir=%EXT%\ ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
+  /p:GIT="" ^
+  /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
+  /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
+  2>&1
+if errorlevel 1 (echo [xp-build] python3t.dll FAILED & exit /b 1)
 
 REM ===== Step 3.7: venv launchers + py launchers (v141_xp + Py_XP) =========
 REM Layout needs venvlauncher/venvwlauncher (Lib/venv/scripts/nt) and
@@ -182,8 +199,8 @@ echo [xp-build] step 3.7: venvlauncher (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -200,8 +217,8 @@ echo [xp-build] step 3.7: venvwlauncher (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -218,8 +235,8 @@ echo [xp-build] step 3.7: pylauncher (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -236,8 +253,8 @@ echo [xp-build] step 3.7: pywlauncher (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -256,8 +273,8 @@ echo [xp-build] step 3/3: python.exe + pythonw.exe (v141_xp + Py_XP)...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -275,8 +292,8 @@ if errorlevel 1 (echo [xp-build] python.exe FAILED & exit /b 1)
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT%\ ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^

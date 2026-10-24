@@ -60,7 +60,7 @@ Summary -- Release highlights
 .. This section singles out the most important changes in Python 3.14.
    Brevity is key.
 
-Python 3.14 is the latest stable release of the Python programming
+Python 3.14 is a stable release of the Python programming
 language, with a mix of changes to the language, the implementation,
 and the standard library.
 The biggest changes include :ref:`template string literals
@@ -217,7 +217,7 @@ has significant benefits:
 * they support a new (to Python), human-friendly concurrency model
 * true multi-core parallelism
 
-For some use cases, concurrency in software enables efficiency and
+For some use cases, concurrency in software improves efficiency and
 can simplify design, at a high level.
 At the same time, implementing and maintaining all but the simplest concurrency
 is often a struggle for the human brain.
@@ -225,9 +225,10 @@ That especially applies to plain threads (for example, :mod:`threading`),
 where all memory is shared between all threads.
 
 With multiple isolated interpreters, you can take advantage of a class
-of concurrency models, like CSP or the actor model, that have found
+of concurrency models, like Communicating Sequential Processes (CSP)
+or the actor model, that have found
 success in other programming languages, like Smalltalk, Erlang,
-Haskell, and Go. Think of multiple interpreters like threads
+Haskell, and Go. Think of multiple interpreters as threads
 but with opt-in sharing.
 
 Regarding multi-core parallelism: as of Python 3.12, interpreters
@@ -249,8 +250,8 @@ having the isolation of processes with the efficiency of threads.
 While the feature has been around for decades, multiple interpreters
 have not been used widely, due to low awareness and the lack of a
 standard library module. Consequently, they currently have several
-notable limitations, which will improve significantly now that the
-feature is finally going mainstream.
+notable limitations, which are expected to improve significantly now
+that the feature is going mainstream.
 
 Current limitations:
 
@@ -449,11 +450,11 @@ depending on platform and architecture.
 The baseline is Python 3.14 built with Clang 19, without this new interpreter.
 
 This interpreter currently only works with Clang 19 and newer
-on x86-64 and AArch64 architectures. However, a future release
-of GCC is expected will support this as well.
+on x86-64 and AArch64 architectures.
+However, a future release of GCC is expected to support this as well.
 
 This feature is opt-in for now. Enabling profile-guided optimization is highly
-recommendeded when using the new interpreter as it is the only configuration
+recommended when using the new interpreter as it is the only configuration
 that has been tested and validated for improved performance.
 For further information, see :option:`--with-tail-call-interp`.
 
@@ -647,7 +648,7 @@ Improved error messages
 :pep:`784`: Zstandard support in the standard library
 -----------------------------------------------------
 
-The new :mod:`!compression` package contains modules :mod:`!compression.lzma`,
+The new :mod:`compression` package contains modules :mod:`!compression.lzma`,
 :mod:`!compression.bz2`, :mod:`!compression.gzip` and :mod:`!compression.zlib`
 which re-export the :mod:`lzma`, :mod:`bz2`, :mod:`gzip` and :mod:`zlib`
 modules respectively. The new import names under :mod:`!compression` are the
@@ -656,7 +657,7 @@ the existing modules names have not been deprecated. Any deprecation or removal
 of the existing compression modules will occur no sooner than five years after
 the release of 3.14.
 
-The new :mod:`!compression.zstd` module provides compression and decompression
+The new :mod:`compression.zstd` module provides compression and decompression
 APIs for the Zstandard format via bindings to `Meta's zstd library
 <https://facebook.github.io/zstd/>`__. Zstandard is a widely adopted, highly
 efficient, and fast compression format. In addition to the APIs introduced in
@@ -896,8 +897,7 @@ Command line and environment
   (Contributed by Noah Kim and Adam Turner in :gh:`118655`.)
 
 * The command-line option :option:`-c` now automatically dedents its code
-  argument before execution. The auto-dedentation behavior mirrors
-  :func:`textwrap.dedent`.
+  argument before execution.
   (Contributed by Jon Crall and Steven Sun in :gh:`103998`.)
 
 * :option:`!-J` is no longer a reserved flag for Jython_,
@@ -953,10 +953,24 @@ when a module is imported) will still emit the syntax warning.
 (Contributed by Irit Katriel in :gh:`130080`.)
 
 
+.. _incremental-garbage-collection:
 .. _whatsnew314-incremental-gc:
 
-Incremental garbage collection
-------------------------------
+Garbage collection
+------------------
+
+**From Python 3.14.5 onwards:**
+
+The garbage collector (GC) has changed in Python 3.14.5.
+
+Python 3.14.0-3.14.4 shipped with a new incremental GC.
+However, due to a number of `reports
+<https://github.com/python/cpython/issues/142516>`__
+of significant memory pressure in production environments,
+it has been reverted back to the generational GC from 3.13.
+This is the GC now used in Python 3.14.5 and later.
+
+**Previously in Python 3.14.0-3.14.4:**
 
 The cycle garbage collector is now incremental.
 This means that maximum pause times are reduced
@@ -1139,7 +1153,7 @@ concurrent.futures
 .. _whatsnew314-concurrent-futures-start-method:
 
 * On Unix platforms other than macOS, :ref:`'forkserver'
-  <multiprocessing-start-method-forkserver>` is now the the default :ref:`start
+  <multiprocessing-start-method-forkserver>` is now the default :ref:`start
   method <multiprocessing-start-methods>` for
   :class:`~concurrent.futures.ProcessPoolExecutor`
   (replacing :ref:`'fork' <multiprocessing-start-method-fork>`).
@@ -1590,7 +1604,7 @@ multiprocessing
 .. _whatsnew314-multiprocessing-start-method:
 
 * On Unix platforms other than macOS, :ref:`'forkserver'
-  <multiprocessing-start-method-forkserver>` is now the the default :ref:`start
+  <multiprocessing-start-method-forkserver>` is now the default :ref:`start
   method <multiprocessing-start-methods>`
   (replacing :ref:`'fork' <multiprocessing-start-method-fork>`).
   This change does not affect Windows or macOS, where :ref:`'spawn'
@@ -1891,6 +1905,12 @@ sys.monitoring
   :monitoring-event:`BRANCH_RIGHT`.
   These replace and deprecate the :monitoring-event:`!BRANCH` event.
   (Contributed by Mark Shannon in :gh:`122548`.)
+
+* Add :func:`sys.monitoring.clear_tool_id` to unregister all events and
+  callback functions associated with a tool identifier.
+  :func:`sys.monitoring.free_tool_id` now calls it before releasing the
+  tool identifier, instead of leaving its events and callbacks registered.
+  (Contributed by Tian Gao in :gh:`116750`.)
 
 
 sysconfig
@@ -2203,7 +2223,18 @@ difflib
 gc
 --
 
-* The new :ref:`incremental garbage collector <whatsnew314-incremental-gc>`
+* **From Python 3.14.5 onwards:**
+
+  Python 3.14.0-3.14.4 shipped with a new incremental garbage collector.
+  However, due to a number of `reports
+  <https://github.com/python/cpython/issues/142516>`__
+  of significant memory pressure in production environments,
+  it has been reverted back to the generational GC from 3.13.
+  This is the GC now used in Python 3.14.5 and later.
+
+* **Previously in Python 3.14.0-3.14.4:**
+
+  The new :ref:`incremental garbage collector <whatsnew314-incremental-gc>`
   means that maximum pause times are reduced
   by an order of magnitude or more for larger heaps.
 
@@ -2262,6 +2293,15 @@ pdb
   Explicitly instantiating :class:`pdb.Pdb` and its derived classes
   will use the :func:`sys.settrace` backend by default, which is configurable.
   (Contributed by Tian Gao in :gh:`124533`.)
+
+
+textwrap
+--------
+
+* Optimize the :func:`~textwrap.dedent` function, improving performance by
+  an average of 2.4x, with larger improvements for bigger inputs,
+  and fix a bug with incomplete normalization of blank lines with whitespace
+  characters other than space and tab.
 
 
 uuid
@@ -2708,7 +2748,11 @@ New deprecations
 
 .. include:: ../deprecations/pending-removal-in-3.17.rst
 
+.. include:: ../deprecations/pending-removal-in-3.18.rst
+
 .. include:: ../deprecations/pending-removal-in-3.19.rst
+
+.. include:: ../deprecations/pending-removal-in-3.20.rst
 
 .. include:: ../deprecations/pending-removal-in-future.rst
 
@@ -2781,7 +2825,7 @@ Pseudo-instructions
 * Add the :opcode:`!LOAD_CONST_MORTAL` pseudo instruction.
   (Contributed by Mark Shannon in :gh:`128685`.)
 
-* Add the :opcode:`LOAD_CONST_IMMORTAL` pseudo instruction,
+* Add the :opcode:`!LOAD_CONST_IMMORTAL` pseudo instruction,
   which does the same as :opcode:`!LOAD_CONST`, but is more efficient
   for immortal objects.
   (Contributed by Mark Shannon in :gh:`125837`.)
@@ -3042,7 +3086,7 @@ Deprecated C APIs
 -----------------
 
 * The :c:macro:`!Py_HUGE_VAL` macro is now :term:`soft deprecated`.
-  Use :c:macro:`!Py_INFINITY` instead.
+  Use :c:macro:`!INFINITY` instead.
   (Contributed by Sergey B Kirpichev in :gh:`120026`.)
 
 * The :c:macro:`!Py_IS_NAN`, :c:macro:`!Py_IS_INFINITY`,
@@ -3272,6 +3316,16 @@ Changes in the Python API
   This temporary change affects other threads.
   (Contributed by Serhiy Storchaka in :gh:`69998`.)
 
+* :func:`pickle.dump` and :func:`pickle.dumps` now raise
+  :exc:`~pickle.PicklingError` for some failures that previously raised
+  :exc:`AttributeError`, :exc:`ImportError`, :exc:`ValueError`,
+  :exc:`UnicodeEncodeError` or :exc:`!PicklingError`,
+  depending on the implementation
+  (for example, pickling a local object, or an object whose module cannot be imported).
+  The original exception is chained to the :exc:`!PicklingError`.
+  Code that caught these exceptions should also catch :exc:`!PicklingError`.
+  (Contributed by Serhiy Storchaka in :gh:`122311`.)
+
 * :class:`types.UnionType` is now an alias for :class:`typing.Union`,
   causing changes in some behaviors.
   See :ref:`above <whatsnew314-typing-union>` for more details.
@@ -3434,3 +3488,17 @@ Changes in the C API
   functions on Python 3.13 and older.
 
 .. _pythoncapi-compat project: https://github.com/python/pythoncapi-compat/
+
+
+Notable changes in 3.14.5
+=========================
+
+gc
+--
+
+* The incremental garbage collector shipped in Python 3.14.0-3.14.4 has been
+  reverted back to the generational garbage collector from 3.13,
+  due to a number of `reports
+  <https://github.com/python/cpython/issues/142516>`__
+  of significant memory pressure in production environments.
+  See :ref:`whatsnew314-incremental-gc` for details.

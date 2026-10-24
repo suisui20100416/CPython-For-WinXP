@@ -1117,9 +1117,6 @@ PyImport_ImportModuleLevelObject:PyObject*:locals:0:???
 PyImport_ImportModuleLevelObject:PyObject*:fromlist:0:???
 PyImport_ImportModuleLevelObject:int:level::
 
-PyImport_ImportModuleNoBlock:PyObject*::+1:
-PyImport_ImportModuleNoBlock:const char*:name::
-
 PyImport_ReloadModule:PyObject*::+1:
 PyImport_ReloadModule:PyObject*:m:0:
 
@@ -1475,6 +1472,9 @@ PyModule_Create2:PyObject*::+1:
 PyModule_Create2:PyModuleDef*:def::
 PyModule_Create2:int:module_api_version::
 
+PyModule_Exec:int:::
+PyModule_ExecDef:PyObject*:module:0:
+
 PyModule_ExecDef:int:::
 PyModule_ExecDef:PyObject*:module:0:
 PyModule_ExecDef:PyModuleDef*:def::
@@ -1487,6 +1487,10 @@ PyModule_FromDefAndSpec2:PyObject*::+1:
 PyModule_FromDefAndSpec2:PyModuleDef*:def::
 PyModule_FromDefAndSpec2:PyObject*:spec:0:
 PyModule_FromDefAndSpec2:int:module_api_version::
+
+PyModule_FromSlotsAndSpec:PyObject*::+1:
+PyModule_FromSlotsAndSpec:const PyModuleDef_Slot *:slots::
+PyModule_FromSlotsAndSpec:PyObject*:spec:0:
 
 PyModule_GetDef:PyModuleDef*::0:
 PyModule_GetDef:PyObject*:module:0:
@@ -1508,6 +1512,14 @@ PyModule_GetNameObject:PyObject*:module:0:
 
 PyModule_GetState:void*:::
 PyModule_GetState:PyObject*:module:0:
+
+PyModule_GetStateSize:int:::
+PyModule_GetStateSize:PyObject*:module:0:
+PyModule_GetToken:Py_ssize_t**:result::
+
+PyModule_GetToken:int:::
+PyModule_GetToken:PyObject*:module:0:
+PyModule_GetToken:void**:result::
 
 PyModule_New:PyObject*::+1:
 PyModule_New:char*:name::
@@ -2025,6 +2037,11 @@ PySeqIter_Check:PyObject *:op:0:
 PySeqIter_New:PyObject*::+1:
 PySeqIter_New:PyObject*:seq:0:
 
+PySentinel_New:PyObject*::+1:
+PySentinel_New:const char*:name::
+PySentinel_New:const char*:module_name::
+PySentinel_New:const char*:repr::
+
 PySequence_Check:int:::
 PySequence_Check:PyObject*:o:0:
 
@@ -2414,6 +2431,20 @@ PyType_GetFlags:PyTypeObject*:type:0:
 
 PyType_GetName:PyObject*::+1:
 PyType_GetName:PyTypeObject*:type:0:
+
+PyType_GetModule:PyObject*::0:
+PyType_GetModule:PyTypeObject*:type:0:
+
+PyType_GetModule_DuringGC:PyObject*::0:
+PyType_GetModule_DuringGC:PyTypeObject*:type:0:
+
+PyType_GetModuleByToken:PyObject*::+1:
+PyType_GetModuleByToken:PyTypeObject*:type:0:
+PyType_GetModuleByToken:PyModuleDef*:def::
+
+PyType_GetModuleByToken_DuringGC:PyObject*::0:
+PyType_GetModuleByToken_DuringGC:PyTypeObject*:type:0:
+PyType_GetModuleByToken_DuringGC:PyModuleDef*:mod_token::
 
 PyType_GetModuleByDef:PyObject*::0:
 PyType_GetModuleByDef:PyTypeObject*:type:0:
@@ -2953,12 +2984,6 @@ PyWeakref_CheckProxy:PyObject*:ob:0:
 PyWeakref_CheckRef:int:::
 PyWeakref_CheckRef:PyObject*:ob:0:
 
-PyWeakref_GET_OBJECT:PyObject*::0:
-PyWeakref_GET_OBJECT:PyObject*:ref:0:
-
-PyWeakref_GetObject:PyObject*::0:
-PyWeakref_GetObject:PyObject*:ref:0:
-
 PyWeakref_GetRef:int:::
 PyWeakref_GetRef:PyObject*:ref:0:
 PyWeakref_GetRef:PyObject**:pobj:+1:
@@ -3038,17 +3063,7 @@ Py_GetCompiler:const char*:::
 
 Py_GetCopyright:const char*:::
 
-Py_GetExecPrefix:wchar_t*:::
-
-Py_GetPath:wchar_t*:::
-
 Py_GetPlatform:const char*:::
-
-Py_GetPrefix:wchar_t*:::
-
-Py_GetProgramFullPath:wchar_t*:::
-
-Py_GetProgramName:wchar_t*:::
 
 Py_GetVersion:const char*:::
 

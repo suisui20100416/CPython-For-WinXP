@@ -35,6 +35,9 @@
     <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_stencils-aarch64-pc-windows-msvc.h" Condition="$(Platform) == 'ARM64'"/>
     <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_stencils-i686-pc-windows-msvc.h" Condition="$(Platform) == 'Win32'"/>
     <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_stencils-x86_64-pc-windows-msvc.h" Condition="$(Platform) == 'x64'"/>
+    <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_shim-aarch64-pc-windows-msvc.o" Condition="$(Platform) == 'ARM64'"/>
+    <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_shim-i686-pc-windows-msvc.o" Condition="$(Platform) == 'Win32'"/>
+    <_JITOutputs Include="$(GeneratedJitStencilsDir)jit_shim-x86_64-pc-windows-msvc.o" Condition="$(Platform) == 'x64'"/>
     <_CasesSources Include="$(PySourcePath)Python\bytecodes.c;$(PySourcePath)Python\optimizer_bytecodes.c;"/>
     <_CasesOutputs Include="$(PySourcePath)Python\generated_cases.c.h;$(PySourcePath)Include\opcode_ids.h;$(PySourcePath)Include\internal\pycore_uop_ids.h;$(PySourcePath)Python\opcode_targets.h;$(PySourcePath)Include\internal\pycore_opcode_metadata.h;$(PySourcePath)Include\internal\pycore_uop_metadata.h;$(PySourcePath)Python\optimizer_cases.c.h;$(PySourcePath)Lib\_opcode_metadata.py"/>
     <_SbomSources Include="$(PySourcePath)PCbuild\get_externals.bat" />
@@ -112,6 +115,10 @@
           WorkingDirectory="$(PySourcePath)" />
     <Exec Command="$(PythonForBuild) Tools\cases_generator\uop_metadata_generator.py Python\bytecodes.c"
           WorkingDirectory="$(PySourcePath)" />
+    <Exec Command="$(PythonForBuild) Tools\cases_generator\target_generator.py -o Modules\_testinternalcapi\test_targets.h Python\bytecodes.c Modules\_testinternalcapi\testbytecodes.c"
+          WorkingDirectory="$(PySourcePath)" />
+    <Exec Command="$(PythonForBuild) Tools\cases_generator\tier1_generator.py -o Modules\_testinternalcapi\test_cases.c.h Python\bytecodes.c Modules\_testinternalcapi\testbytecodes.c"
+          WorkingDirectory="$(PySourcePath)" />
   </Target>
 
   <Target Name="_RegenJIT"
@@ -125,7 +132,7 @@
       <JITArgs Condition="$(Platform) == 'x64'">x86_64-pc-windows-msvc</JITArgs>
       <JITArgs Condition="$(Configuration) == 'Debug'">$(JITArgs) --debug</JITArgs>
     </PropertyGroup>
-    <Exec Command='$(PythonForBuild) "$(PySourcePath)Tools\jit\build.py" $(JITArgs) --output-dir "$(GeneratedJitStencilsDir)" --pyconfig-dir "$(PySourcePath)PC"'/>
+    <Exec Command='$(PythonForBuild) "$(PySourcePath)Tools\jit\build.py" $(JITArgs) --output-dir "$(GeneratedJitStencilsDir.TrimEnd(`\`))" --pyconfig-dir "$(PySourcePath)PC" --llvm-version="$(LLVM_VERSION)" --llvm-tools-install-dir="$(LLVM_TOOLS_INSTALL_DIR)"'/>
   </Target>
   <Target Name="_CleanJIT" AfterTargets="Clean">
     <Delete Files="@(_JITOutputs)"/>
@@ -164,16 +171,14 @@
                               $(tcltkDir)tklicense.terms" Condition="$(IncludeTkinter)" />
     <!-- xp branch: the XP build builds openssl in openssl-3.5.9-src (the
          default opensslOutDir points at the removed openssl-bin copy), and
-         links mpdecimal, zlib-ng and liblzma (xz, 0BSD) statically into
-         the interpreter, so their license texts must be collected from
-         the source trees or they silently drop out of LICENSE.txt (only
-         a Warning is shown). -->
+         links mpdecimal and zlib-ng statically into the interpreter, so
+         their license texts must be collected from the source trees or
+         they silently drop out of LICENSE.txt (only a Warning is shown). -->
     <_LicenseSources Include="$(ExternalsDir)openssl-3.5.9-src\LICENSE.txt;
                               $(ExternalsDir)tcltk-9.0.4.0\win32\tcllicense.terms;
                               $(ExternalsDir)tcltk-9.0.4.0\win32\tklicense.terms;
                               $(ExternalsDir)mpdecimal-4.0.0\COPYRIGHT.txt;
-                              $(ExternalsDir)zlib-ng-2.2.4\LICENSE.md;
-                              $(ExternalsDir)xz-5.8.1.1\COPYING" Condition="$(XPBuild) == 'true'" />
+                              $(ExternalsDir)zlib-ng-2.2.4\LICENSE.md" Condition="$(XPBuild) == 'true'" />
   </ItemGroup>
 
   <Target Name="_RegenTestFrozenmain" Inputs="@(_TestFrozenSources)" Outputs="@(_TestFrozenOutputs)"

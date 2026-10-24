@@ -27,9 +27,7 @@
                       Source="!(bindpath.build)Scripts\.pip-launcher" KeyPath="yes" />
                 <RemoveFile Id="RemoveLegacyPipExe" Name="pip.exe" On="install" />
                 <RemoveFile Id="RemoveLegacyPip3Exe" Name="pip3.exe" On="install" />
-                <!-- pip3.14.exe is this branch's bundled version; the 3.15
-                     branch additionally removes pip3.15.exe there. -->
-                <RemoveFile Id="RemoveLegacyPip314Exe" Name="pip3.14.exe" On="install" />
+                <RemoveFile Id="RemoveLegacyPip315Exe" Name="pip3.15.exe" On="install" />
             </Component>
         </DirectoryRef>
     </Product>

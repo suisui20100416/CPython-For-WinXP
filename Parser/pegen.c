@@ -3,12 +3,13 @@
 #include "pycore_pystate.h"       // _PyThreadState_GET()
 #include "pycore_parser.h"        // _PYPEGEN_NSTATISTICS
 #include "pycore_pyerrors.h"      // PyExc_IncompleteInputError
-#include "pycore_runtime.h"     // _PyRuntime
+#include "pycore_runtime.h"       // _PyRuntime
 #include "pycore_unicodeobject.h" // _PyUnicode_InternImmortal
 #include <errcode.h>
 
 #include "lexer/lexer.h"
 #include "tokenizer/tokenizer.h"
+#include "tokenizer/helpers.h"
 #include "pegen.h"
 
 // Internal parser functions
@@ -299,22 +300,14 @@ error:
 #define NSTATISTICS _PYPEGEN_NSTATISTICS
 #define memo_statistics _PyRuntime.parser.memo_statistics
 
-#ifdef Py_GIL_DISABLED
-#define MUTEX_LOCK() PyMutex_Lock(&_PyRuntime.parser.mutex)
-#define MUTEX_UNLOCK() PyMutex_Unlock(&_PyRuntime.parser.mutex)
-#else
-#define MUTEX_LOCK()
-#define MUTEX_UNLOCK()
-#endif
-
 void
 _PyPegen_clear_memo_statistics(void)
 {
-    MUTEX_LOCK();
+    PyMutex_Lock(&_PyRuntime.parser.mutex);
     for (int i = 0; i < NSTATISTICS; i++) {
         memo_statistics[i] = 0;
     }
-    MUTEX_UNLOCK();
+    PyMutex_Unlock(&_PyRuntime.parser.mutex);
 }
 
 PyObject *
@@ -325,22 +318,22 @@ _PyPegen_get_memo_statistics(void)
         return NULL;
     }
 
-    MUTEX_LOCK();
+    PyMutex_Lock(&_PyRuntime.parser.mutex);
     for (int i = 0; i < NSTATISTICS; i++) {
         PyObject *value = PyLong_FromLong(memo_statistics[i]);
         if (value == NULL) {
-            MUTEX_UNLOCK();
+            PyMutex_Unlock(&_PyRuntime.parser.mutex);
             Py_DECREF(ret);
             return NULL;
         }
         // PyList_SetItem borrows a reference to value.
         if (PyList_SetItem(ret, i, value) < 0) {
-            MUTEX_UNLOCK();
+            PyMutex_Unlock(&_PyRuntime.parser.mutex);
             Py_DECREF(ret);
             return NULL;
         }
     }
-    MUTEX_UNLOCK();
+    PyMutex_Unlock(&_PyRuntime.parser.mutex);
     return ret;
 }
 #endif
@@ -366,9 +359,9 @@ _PyPegen_is_memoized(Parser *p, int type, void *pres)
                 if (count <= 0) {
                     count = 1;
                 }
-                MUTEX_LOCK();
+                PyMutex_Lock(&_PyRuntime.parser.mutex);
                 memo_statistics[type] += count;
-                MUTEX_UNLOCK();
+                PyMutex_Unlock(&_PyRuntime.parser.mutex);
             }
 #endif
             p->mark = m->mark;
@@ -932,7 +925,6 @@ _PyPegen_set_syntax_error_metadata(Parser *p) {
         the_source // N gives ownership to metadata
     );
     if (!metadata) {
-        Py_DECREF(the_source);
         PyErr_Clear();
         return;
     }
@@ -948,6 +940,11 @@ _PyPegen_run_parser(Parser *p)
 {
     void *res = _PyPegen_parse(p);
     assert(p->level == 0);
+    if (res != NULL && PyErr_Occurred()) {
+        // Discard a result returned with an exception still pending
+        // (e.g. a MemoryError from a recovered-from allocation failure).
+        return NULL;
+    }
     if (res == NULL) {
         if ((p->flags & PyPARSE_ALLOW_INCOMPLETE_INPUT) &&  _is_end_of_source(p)) {
             PyErr_Clear();
@@ -999,14 +996,19 @@ _PyPegen_run_parser_from_file_pointer(FILE *fp, int start_rule, PyObject *filena
                              PyCompilerFlags *flags, int *errcode,
                              PyObject **interactive_src, PyArena *arena)
 {
+    int parser_flags = compute_parser_flags(flags);
     struct tok_state *tok = _PyTokenizer_FromFile(fp, enc, ps1, ps2);
     if (tok == NULL) {
         if (PyErr_Occurred()) {
-            _PyPegen_raise_tokenizer_init_error(filename_ob);
-            return NULL;
+            _PyTokenizer_raise_init_error(filename_ob);
+        }
+        else {
+            // The only silent tokenizer init failure is a failed allocation.
+            PyErr_NoMemory();
         }
         return NULL;
     }
+    tok->barry_as_bdfl = parser_flags & PyPARSE_BARRY_AS_BDFL;
     if (!tok->fp || ps1 != NULL || ps2 != NULL ||
         PyUnicode_CompareWithASCIIString(filename_ob, "<stdin>") == 0) {
         tok->fp_interactive = 1;
@@ -1017,7 +1019,11 @@ _PyPegen_run_parser_from_file_pointer(FILE *fp, int start_rule, PyObject *filena
     // From here on we need to clean up even if there's an error
     mod_ty result = NULL;
 
-    int parser_flags = compute_parser_flags(flags);
+    tok->module = PyUnicode_FromString("__main__");
+    if (tok->module == NULL) {
+        goto error;
+    }
+
     Parser *p = _PyPegen_Parser_New(tok, start_rule, parser_flags, PY_MINOR_VERSION,
                                     errcode, NULL, arena);
     if (p == NULL) {
@@ -1029,8 +1035,8 @@ _PyPegen_run_parser_from_file_pointer(FILE *fp, int start_rule, PyObject *filena
 
     if (tok->fp_interactive && tok->interactive_src_start && result && interactive_src != NULL) {
         *interactive_src = PyUnicode_FromString(tok->interactive_src_start);
-        if (!interactive_src || _PyArena_AddPyObject(arena, *interactive_src) < 0) {
-            Py_XDECREF(interactive_src);
+        if (!*interactive_src || _PyArena_AddPyObject(arena, *interactive_src) < 0) {
+            Py_XDECREF(*interactive_src);
             result = NULL;
             goto error;
         }
@@ -1043,9 +1049,10 @@ error:
 
 mod_ty
 _PyPegen_run_parser_from_string(const char *str, int start_rule, PyObject *filename_ob,
-                       PyCompilerFlags *flags, PyArena *arena)
+                       PyCompilerFlags *flags, PyArena *arena, PyObject *module)
 {
     int exec_input = start_rule == Py_file_input;
+    int parser_flags = compute_parser_flags(flags);
 
     struct tok_state *tok;
     if (flags != NULL && flags->cf_flags & PyCF_IGNORE_COOKIE) {
@@ -1055,17 +1062,22 @@ _PyPegen_run_parser_from_string(const char *str, int start_rule, PyObject *filen
     }
     if (tok == NULL) {
         if (PyErr_Occurred()) {
-            _PyPegen_raise_tokenizer_init_error(filename_ob);
+            _PyTokenizer_raise_init_error(filename_ob);
+        }
+        else {
+            // The only silent tokenizer init failure is a failed allocation.
+            PyErr_NoMemory();
         }
         return NULL;
     }
+    tok->barry_as_bdfl = parser_flags & PyPARSE_BARRY_AS_BDFL;
     // This transfers the ownership to the tokenizer
     tok->filename = Py_NewRef(filename_ob);
+    tok->module = Py_XNewRef(module);
 
     // We need to clear up from here on
     mod_ty result = NULL;
 
-    int parser_flags = compute_parser_flags(flags);
     int feature_version = flags && (flags->cf_flags & PyCF_ONLY_AST) ?
         flags->cf_feature_version : PY_MINOR_VERSION;
     Parser *p = _PyPegen_Parser_New(tok, start_rule, parser_flags, feature_version,

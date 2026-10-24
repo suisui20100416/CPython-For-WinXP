@@ -5,6 +5,7 @@
 *.cover
 *.iml
 *.o
+*.o.tmp
 *.lto
 *.a
 *.so
@@ -45,6 +46,7 @@ gmon.out
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+.pixi/
 
 *.exe
 
@@ -122,22 +124,28 @@ PCbuild/*-pgo
 PCbuild/*.VC.db
 PCbuild/*.VC.opendb
 PCbuild/amd64/
+PCbuild/amd64t/
 PCbuild/arm32/
+PCbuild/arm32t/
 PCbuild/arm64/
+PCbuild/arm64t/
 PCbuild/obj/
 PCbuild/win32/
+PCbuild/win32t/
 Tools/unicode/data/
 /autom4te.cache
 /build/
 /builddir/
+/compile_commands.json
 /config.cache
 /config.log
 /config.status
 /config.status.lineno
-# hendrikmuhs/ccache-action@v1
 /.ccache
-/cross-build/
+/cross-build*/
 /jit_stencils*.h
+/jit_unwind_info*.h
+.jit-stamp
 /platform
 /profile-clean-stamp
 /profile-run-stamp

@@ -4,9 +4,6 @@
 .. module:: ssl
    :synopsis: TLS/SSL wrapper for socket objects
 
-.. moduleauthor:: Bill Janssen <bill.janssen@gmail.com>
-.. sectionauthor::  Bill Janssen <bill.janssen@gmail.com>
-
 **Source code:** :source:`Lib/ssl.py`
 
 .. index:: single: OpenSSL; (use in module ssl)
@@ -18,8 +15,9 @@
 This module provides access to Transport Layer Security (often known as "Secure
 Sockets Layer") encryption and peer authentication facilities for network
 sockets, both client-side and server-side.  This module uses the OpenSSL
-library. It is available on all modern Unix systems, Windows, macOS, and
-probably additional platforms, as long as OpenSSL is installed on that platform.
+library.
+
+.. include:: ../includes/optional-module.rst
 
 .. note::
 
@@ -69,7 +67,7 @@ by SSL sockets created through the :meth:`SSLContext.wrap_socket` method.
    Use of deprecated constants and functions result in deprecation warnings.
 
 
-Functions, Constants, and Exceptions
+Functions, constants, and exceptions
 ------------------------------------
 
 
@@ -129,7 +127,7 @@ purposes.
                                      cafile=None, capath=None, cadata=None)
 
    Return a new :class:`SSLContext` object with default settings for
-   the given *purpose*.  The settings are chosen by the :mod:`ssl` module,
+   the given *purpose*.  The settings are chosen by the :mod:`!ssl` module,
    and usually represent a higher security level than when calling the
    :class:`SSLContext` constructor directly.
 
@@ -214,6 +212,25 @@ purposes.
 
       The context now uses :data:`VERIFY_X509_PARTIAL_CHAIN` and
       :data:`VERIFY_X509_STRICT` in its default verify flags.
+
+
+Signature algorithms
+^^^^^^^^^^^^^^^^^^^^
+
+.. function:: get_sigalgs()
+
+   Return a list of available TLS signature algorithm names used
+   by servers to complete the TLS handshake or clients requesting
+   certificate-based authentication. For example::
+
+       >>> ssl.get_sigalgs()  # doctest: +SKIP
+       ['ecdsa_secp256r1_sha256', 'ecdsa_secp384r1_sha384', ...]
+
+   These names can be used when building string values to pass to the
+   :meth:`SSLContext.set_client_sigalgs` and
+   :meth:`SSLContext.set_server_sigalgs` methods.
+
+   .. versionadded:: 3.15
 
 
 Exceptions
@@ -335,9 +352,8 @@ Random generation
 .. function:: RAND_status()
 
    Return ``True`` if the SSL pseudo-random number generator has been seeded
-   with 'enough' randomness, and ``False`` otherwise.  You can use
-   :func:`ssl.RAND_egd` and :func:`ssl.RAND_add` to increase the randomness of
-   the pseudo-random number generator.
+   with 'enough' randomness, and ``False`` otherwise.  Use :func:`ssl.RAND_add`
+   to increase the randomness of the pseudo-random number generator.
 
 .. function:: RAND_add(bytes, entropy, /)
 
@@ -358,7 +374,7 @@ Certificate handling
 
 .. function:: cert_time_to_seconds(cert_time)
 
-   Return the time in seconds since the Epoch, given the ``cert_time``
+   Return the time in seconds since the epoch, given the ``cert_time``
    string representing the "notBefore" or "notAfter" date from a
    certificate in ``"%b %d %H:%M:%S %Y %Z"`` strptime format (C
    locale).
@@ -368,12 +384,12 @@ Certificate handling
    .. doctest:: newcontext
 
       >>> import ssl
+      >>> import datetime as dt
       >>> timestamp = ssl.cert_time_to_seconds("Jan  5 09:34:43 2018 GMT")
       >>> timestamp  # doctest: +SKIP
       1515144883
-      >>> from datetime import datetime
-      >>> print(datetime.utcfromtimestamp(timestamp))  # doctest: +SKIP
-      2018-01-05 09:34:43
+      >>> print(dt.datetime.fromtimestamp(timestamp, dt.UTC))  # doctest: +SKIP
+      2018-01-05 09:34:43+00:00
 
    "notBefore" or "notAfter" dates must use GMT (:rfc:`5280`).
 
@@ -935,6 +951,13 @@ Constants
 
    .. versionadded:: 3.13
 
+.. data:: HAS_PSK_TLS13
+
+   Whether the OpenSSL library has built-in support for External PSKs in TLS
+   1.3 as described in :rfc:`9258`.
+
+   .. versionadded:: 3.15
+
 .. data:: HAS_PHA
 
    Whether the OpenSSL library has built-in support for TLS-PHA.
@@ -1049,7 +1072,7 @@ Constants
       :attr:`TLSVersion.TLSv1_3` are deprecated.
 
 
-SSL Sockets
+SSL sockets
 -----------
 
 .. class:: SSLSocket(socket.socket)
@@ -1072,8 +1095,9 @@ SSL Sockets
      (but passing a non-zero ``flags`` argument is not allowed)
    - :meth:`~socket.socket.send`, :meth:`~socket.socket.sendall` (with
      the same limitation)
-   - :meth:`~socket.socket.sendfile` (but :mod:`os.sendfile` will be used
-     for plain-text sockets only, else :meth:`~socket.socket.send` will be used)
+   - :meth:`~socket.socket.sendfile` (it may be high-performant only when
+     the kernel TLS is enabled by setting :data:`~ssl.OP_ENABLE_KTLS` or when a
+     socket is plain-text, else :meth:`~socket.socket.send` will be used)
    - :meth:`~socket.socket.shutdown`
 
    However, since the SSL (and TLS) protocol has its own framing atop
@@ -1097,7 +1121,7 @@ SSL Sockets
       :meth:`SSLContext.wrap_socket` to wrap a socket.
 
    .. versionchanged:: 3.7
-      :class:`SSLSocket` instances must to created with
+      :class:`SSLSocket` instances must be created with
       :meth:`~SSLContext.wrap_socket`. In earlier versions, it was possible
       to create instances directly. This was never documented or officially
       supported.
@@ -1106,6 +1130,11 @@ SSL Sockets
       Python now uses ``SSL_read_ex`` and ``SSL_write_ex`` internally. The
       functions support reading and writing of data larger than 2 GB. Writing
       zero-length data no longer fails with a protocol violation error.
+
+   .. versionchanged:: 3.15
+      Python now uses ``SSL_sendfile`` internally when possible. The
+      function sends a file more efficiently because it performs TLS encryption
+      in the kernel to avoid additional context switches.
 
 SSL sockets also have the following additional methods and attributes:
 
@@ -1281,6 +1310,29 @@ SSL sockets also have the following additional methods and attributes:
 
    .. versionadded:: 3.5
 
+.. method:: SSLSocket.group()
+
+   Return the group used for doing key agreement on this connection. If no
+   connection has been established, returns ``None``.
+
+   .. versionadded:: 3.15
+
+.. method:: SSLSocket.client_sigalg()
+
+   Return the signature algorithm used for performing certificate-based client
+   authentication on this connection, or ``None`` if no connection has been
+   established or client authentication didn't occur.
+
+   .. versionadded:: 3.15
+
+.. method:: SSLSocket.server_sigalg()
+
+   Return the signature algorithm used by the server to complete the TLS
+   handshake on this connection, or ``None`` if no connection has been
+   established or the cipher suite has no signature.
+
+   .. versionadded:: 3.15
+
 .. method:: SSLSocket.compression()
 
    Return the compression algorithm being used as a string, or ``None``
@@ -1410,7 +1462,7 @@ SSL sockets also have the following additional methods and attributes:
    .. versionadded:: 3.6
 
 
-SSL Contexts
+SSL contexts
 ------------
 
 .. versionadded:: 3.2
@@ -1455,7 +1507,7 @@ to speed up repeated connections from the same clients.
       TLS 1.3.
 
    .. seealso::
-      :func:`create_default_context` lets the :mod:`ssl` module choose
+      :func:`create_default_context` lets the :mod:`!ssl` module choose
       security settings for a given purpose.
 
    .. versionchanged:: 3.6
@@ -1638,6 +1690,25 @@ to speed up repeated connections from the same clients.
 
    .. versionadded:: 3.6
 
+.. method:: SSLContext.get_groups(*, include_aliases=False)
+
+   Get a list of groups implemented for key agreement, taking into
+   account the current TLS :attr:`~SSLContext.minimum_version` and
+   :attr:`~SSLContext.maximum_version` values.  For example::
+
+       >>> ctx = ssl.create_default_context()
+       >>> ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+       >>> ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+       >>> ctx.get_groups()  # doctest: +SKIP
+       ['secp256r1', 'secp384r1', 'secp521r1', 'x25519', 'x448', ...]
+
+   By default, this method returns only the preferred IANA names for the
+   available groups. However, if the ``include_aliases`` parameter is set to
+   :const:`True` this method will also return any associated aliases such as
+   the ECDH curve names supported in older versions of OpenSSL.
+
+   .. versionadded:: 3.15
+
 .. method:: SSLContext.set_default_verify_paths()
 
    Load a set of default "certification authority" (CA) certificates from
@@ -1649,19 +1720,75 @@ to speed up repeated connections from the same clients.
 
 .. method:: SSLContext.set_ciphers(ciphers, /)
 
-   Set the available ciphers for sockets created with this context.
-   It should be a string in the `OpenSSL cipher list format
+   Set the allowed ciphers for sockets created with this context when
+   connecting using TLS 1.2 and earlier.  The *ciphers* argument should
+   be a string in the `OpenSSL cipher list format
    <https://docs.openssl.org/master/man1/ciphers/>`_.
+   To set allowed TLS 1.3 ciphers, use :meth:`SSLContext.set_ciphersuites`.
+
    If no cipher can be selected (because compile-time options or other
    configuration forbids use of all the specified ciphers), an
    :class:`SSLError` will be raised.
 
    .. note::
-      when connected, the :meth:`SSLSocket.cipher` method of SSL sockets will
-      give the currently selected cipher.
+      When connected, the :meth:`SSLSocket.cipher` method of SSL sockets will
+      return details about the negotiated cipher.
 
-      TLS 1.3 cipher suites cannot be disabled with
-      :meth:`~SSLContext.set_ciphers`.
+.. method:: SSLContext.set_ciphersuites(ciphersuites, /)
+
+   Set the allowed ciphers for sockets created with this context when
+   connecting using TLS 1.3.  The *ciphersuites* argument should be a
+   colon-separate string of TLS 1.3 cipher names.  If no cipher can be
+   selected (because compile-time options or other configuration forbids
+   use of all the specified ciphers), an :class:`SSLError` will be raised.
+
+   .. note::
+      When connected, the :meth:`SSLSocket.cipher` method of SSL sockets will
+      return details about the negotiated cipher.
+
+   .. versionadded:: 3.15
+
+.. method:: SSLContext.set_groups(groups, /)
+
+   Set the groups allowed for key agreement for sockets created with this
+   context.  It should be a string in the `OpenSSL group list format
+   <https://docs.openssl.org/master/man3/SSL_CTX_set1_groups_list/>`_.
+
+   .. note::
+
+      When connected, the :meth:`SSLSocket.group` method of SSL sockets will
+      return the group used for key agreement on that connection.
+
+   .. versionadded:: 3.15
+
+.. method:: SSLContext.set_client_sigalgs(sigalgs, /)
+
+   Set the signature algorithms allowed for certificate-based client
+   authentication. It should be a string in the `OpenSSL client sigalgs
+   list format
+   <https://docs.openssl.org/master/man3/SSL_CTX_set1_client_sigalgs_list/>`_.
+
+   .. note::
+
+      When connected, the :meth:`SSLSocket.client_sigalg` method of SSL
+      sockets will return the signature algorithm used for performing
+      certificate-based client authentication on that connection.
+
+   .. versionadded:: 3.15
+
+.. method:: SSLContext.set_server_sigalgs(sigalgs, /)
+
+   Set the signature algorithms allowed for the server to complete the TLS
+   handshake. It should be a string in the `OpenSSL sigalgs list format
+   <https://docs.openssl.org/master/man3/SSL_CTX_set1_sigalgs_list/>`_.
+
+   .. note::
+
+      When connected, the :meth:`SSLSocket.server_sigalg` method of SSL
+      sockets will return the signature algorithm used by the server to
+      complete the TLS handshake on that connection.
+
+   .. versionadded:: 3.15
 
 .. method:: SSLContext.set_alpn_protocols(alpn_protocols)
 
@@ -1720,6 +1847,12 @@ to speed up repeated connections from the same clients.
    :class:`SSLContext` representing a certificate chain that matches the server
    name.
 
+   If the callback assigns a new context to :attr:`SSLSocket.context`, any
+   further ClientHello message on the same connection (for example after a
+   TLS 1.3 HelloRetryRequest) is dispatched to the new context's
+   *sni_callback*, if it has one; the original callback is not called again
+   for that connection.
+
    Due to the early negotiation phase of the TLS connection, only limited
    methods and attributes are usable like
    :meth:`SSLSocket.selected_alpn_protocol` and :attr:`SSLSocket.context`.
@@ -1743,6 +1876,11 @@ to speed up repeated connections from the same clients.
    had OPENSSL_NO_TLSEXT defined when it was built.
 
    .. versionadded:: 3.7
+
+   .. versionchanged:: 3.15
+      After the callback assigns a new :attr:`SSLSocket.context`, later
+      ClientHello messages on the connection are dispatched to the new
+      context's *sni_callback*.
 
 .. method:: SSLContext.set_servername_callback(server_name_callback)
 
@@ -1865,7 +2003,11 @@ to speed up repeated connections from the same clients.
    outgoing BIO.
 
    The *server_side*, *server_hostname* and *session* parameters have the
-   same meaning as in :meth:`SSLContext.wrap_socket`.
+   same meaning as in :meth:`SSLContext.wrap_socket`, and are validated in
+   the same way: in particular a :exc:`ValueError` is raised when
+   :attr:`~SSLContext.check_hostname` is enabled but no *server_hostname* is
+   given, since there would be no name to match the peer's certificate
+   against.
 
    .. versionchanged:: 3.6
       *session* argument was added.
@@ -1873,6 +2015,13 @@ to speed up repeated connections from the same clients.
    .. versionchanged:: 3.7
       The method returns an instance of :attr:`SSLContext.sslobject_class`
       instead of hard-coded :class:`SSLObject`.
+
+   .. versionchanged:: 3.15
+      The *server_side*, *server_hostname* and *session* parameters are now
+      validated as :meth:`SSLContext.wrap_socket` validates them. Previously
+      a context with :attr:`~SSLContext.check_hostname` enabled and no
+      *server_hostname* was accepted, and verified the certificate chain but
+      never the peer's identity.
 
 .. attribute:: SSLContext.sslobject_class
 
@@ -1949,7 +2098,7 @@ to speed up repeated connections from the same clients.
    :attr:`~SSLContext.minimum_version` and
    :attr:`SSLContext.options` all affect the supported SSL
    and TLS versions of the context. The implementation does not prevent
-   invalid combination. For example a context with
+   invalid combinations. For example a context with
    :attr:`OP_NO_TLSv1_2` in :attr:`~SSLContext.options` and
    :attr:`~SSLContext.maximum_version` set to :attr:`TLSVersion.TLSv1_2`
    will not be able to establish a TLS 1.2 connection.
@@ -2526,7 +2675,7 @@ thus several things you need to be aware of:
    as well.
 
 
-Memory BIO Support
+Memory BIO support
 ------------------
 
 .. versionadded:: 3.5
@@ -2752,11 +2901,11 @@ disabled by default.
 ::
 
    >>> client_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-   >>> client_context.minimum_version = ssl.TLSVersion.TLSv1_3
+   >>> client_context.minimum_version = ssl.TLSVersion.TLSv1_2
    >>> client_context.maximum_version = ssl.TLSVersion.TLSv1_3
 
 
-The SSL context created above will only allow TLSv1.3 and later (if
+The SSL client context created above will only allow TLSv1.2 and TLSv1.3 (if
 supported by your system) connections to a server. :const:`PROTOCOL_TLS_CLIENT`
 implies certificate validation and hostname checks by default. You have to
 load certificates into the context.
@@ -2797,10 +2946,15 @@ TLS 1.3
 The TLS 1.3 protocol behaves slightly differently than previous version
 of TLS/SSL. Some new TLS 1.3 features are not yet available.
 
-- TLS 1.3 uses a disjunct set of cipher suites. All AES-GCM and
-  ChaCha20 cipher suites are enabled by default.  The method
-  :meth:`SSLContext.set_ciphers` cannot enable or disable any TLS 1.3
-  ciphers yet, but :meth:`SSLContext.get_ciphers` returns them.
+- TLS 1.3 uses a disjunct set of cipher suites.  All AES-GCM and ChaCha20
+  cipher suites are enabled by default.  To restrict which TLS 1.3 ciphers
+  are allowed, the :meth:`SSLContext.set_ciphersuites` method should be
+  called instead of :meth:`SSLContext.set_ciphers`, which only affects
+  ciphers in older TLS versions.  The :meth:`SSLContext.get_ciphers` method
+  returns information about ciphers for both TLS 1.3 and earlier versions
+  and the method :meth:`SSLSocket.cipher` returns information about the
+  negotiated cipher for both TLS 1.3 and earlier versions once a connection
+  is established.
 - Session tickets are no longer sent as part of the initial handshake and
   are handled differently.  :attr:`SSLSocket.session` and :class:`SSLSession`
   are not compatible with TLS 1.3.
@@ -2809,7 +2963,7 @@ of TLS/SSL. Some new TLS 1.3 features are not yet available.
   process certificate requests while they send or receive application data
   from the server.
 - TLS 1.3 features like early data, deferred TLS client cert request,
-  signature algorithm configuration, and rekeying are not supported yet.
+  and rekeying are not supported yet.
 
 
 .. seealso::
@@ -2824,16 +2978,16 @@ of TLS/SSL. Some new TLS 1.3 features are not yet available.
        Steve Kent
 
    :rfc:`RFC 4086: Randomness Requirements for Security <4086>`
-       Donald E., Jeffrey I. Schiller
+       Donald E. Eastlake, Jeffrey I. Schiller, Steve Crocker
 
    :rfc:`RFC 5280: Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile <5280>`
-       D. Cooper
+       David Cooper et al.
 
    :rfc:`RFC 5246: The Transport Layer Security (TLS) Protocol Version 1.2 <5246>`
-       T. Dierks et. al.
+       Tim Dierks and Eric Rescorla.
 
    :rfc:`RFC 6066: Transport Layer Security (TLS) Extensions <6066>`
-       D. Eastlake
+       Donald E. Eastlake
 
    `IANA TLS: Transport Layer Security (TLS) Parameters <https://www.iana.org/assignments/tls-parameters/tls-parameters.xml>`_
        IANA

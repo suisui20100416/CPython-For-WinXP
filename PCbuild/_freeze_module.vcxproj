@@ -152,6 +152,7 @@
     <ClCompile Include="..\Objects\genobject.c" />
     <ClCompile Include="..\Objects\interpolationobject.c" />
     <ClCompile Include="..\Objects\iterobject.c" />
+    <ClCompile Include="..\Objects\lazyimportobject.c" />
     <ClCompile Include="..\Objects\listobject.c" />
     <ClCompile Include="..\Objects\longobject.c" />
     <ClCompile Include="..\Objects\memoryobject.c" />
@@ -163,6 +164,7 @@
     <ClCompile Include="..\Objects\odictobject.c" />
     <ClCompile Include="..\Objects\picklebufobject.c" />
     <ClCompile Include="..\Objects\rangeobject.c" />
+    <ClCompile Include="..\Objects\sentinelobject.c" />
     <ClCompile Include="..\Objects\setobject.c" />
     <ClCompile Include="..\Objects\sliceobject.c" />
     <ClCompile Include="..\Objects\structseq.c" />
@@ -170,7 +172,10 @@
     <ClCompile Include="..\Objects\tupleobject.c" />
     <ClCompile Include="..\Objects\typeobject.c" />
     <ClCompile Include="..\Objects\typevarobject.c" />
+    <ClCompile Include="..\Objects\unicode_format.c" />
     <ClCompile Include="..\Objects\unicodectype.c" />
+    <ClCompile Include="..\Objects\unicode_formatter.c" />
+    <ClCompile Include="..\Objects\unicode_writer.c" />
     <ClCompile Include="..\Objects\unicodeobject.c" />
     <ClCompile Include="..\Objects\unionobject.c" />
     <ClCompile Include="..\Objects\weakrefobject.c" />
@@ -215,7 +220,6 @@
     <ClCompile Include="..\Python\errors.c" />
     <ClCompile Include="..\Python\fileutils.c" />
     <ClCompile Include="..\Python\flowgraph.c" />
-    <ClCompile Include="..\Python\formatter_unicode.c" />
     <ClCompile Include="..\Python\frame.c" />
     <ClCompile Include="..\Python\future.c" />
     <ClCompile Include="..\Python\gc.c" />
@@ -239,6 +243,7 @@
     <ClCompile Include="..\Python\intrinsics.c" />
     <ClCompile Include="..\Python\instrumentation.c" />
     <ClCompile Include="..\Python\jit.c" />
+    <ClCompile Include="..\Python\jit_publish.c" />
     <ClCompile Include="..\Python\legacy_tracing.c" />
     <ClCompile Include="..\Python\lock.c" />
     <ClCompile Include="..\Python\marshal.c" />
@@ -261,6 +266,7 @@
     <ClCompile Include="..\Python\pylifecycle.c" />
     <ClCompile Include="..\Python\pymath.c" />
     <ClCompile Include="..\Python\pystate.c" />
+    <ClCompile Include="..\Python\pystats.c" />
     <ClCompile Include="..\Python\pystrcmp.c" />
     <ClCompile Include="..\Python\pystrhex.c" />
     <ClCompile Include="..\Python\pystrtod.c" />
@@ -270,6 +276,8 @@
     <ClCompile Include="..\Python\pytime.c" />
     <ClCompile Include="..\Python\qsbr.c" />
     <ClCompile Include="..\Python\remote_debugging.c" />
+    <ClCompile Include="..\Python\slots.c" />
+    <ClCompile Include="..\Python\slots_generated.c" />
     <ClCompile Include="..\Python\specialize.c" />
     <ClCompile Include="..\Python\structmember.c" />
     <ClCompile Include="..\Python\suggestions.c" />
@@ -356,6 +364,11 @@
       <ModName>stat</ModName>
       <IntFile>$(IntDir)stat.g.h</IntFile>
       <OutFile>$(GeneratedFrozenModulesDir)Python\frozen_modules\stat.h</OutFile>
+    </None>
+    <None Include="..\Lib\linecache.py">
+      <ModName>linecache</ModName>
+      <IntFile>$(IntDir)linecache.g.h</IntFile>
+      <OutFile>$(GeneratedFrozenModulesDir)Python\frozen_modules\linecache.h</OutFile>
     </None>
     <None Include="..\Lib\importlib\util.py">
       <ModName>importlib.util</ModName>

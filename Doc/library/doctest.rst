@@ -4,16 +4,11 @@
 .. module:: doctest
    :synopsis: Test pieces of code within docstrings.
 
-.. moduleauthor:: Tim Peters <tim@python.org>
-.. sectionauthor:: Tim Peters <tim@python.org>
-.. sectionauthor:: Moshe Zadka <moshez@debian.org>
-.. sectionauthor:: Edward Loper <edloper@users.sourceforge.net>
-
 **Source code:** :source:`Lib/doctest.py`
 
 --------------
 
-The :mod:`doctest` module searches for pieces of text that look like interactive
+The :mod:`!doctest` module searches for pieces of text that look like interactive
 Python sessions, and then executes those sessions to verify that they work
 exactly as shown.  There are several common ways to use doctest:
 
@@ -85,7 +80,7 @@ Here's a complete but small example module::
        import doctest
        doctest.testmod()
 
-If you run :file:`example.py` directly from the command line, :mod:`doctest`
+If you run :file:`example.py` directly from the command line, :mod:`!doctest`
 works its magic:
 
 .. code-block:: shell-session
@@ -94,7 +89,7 @@ works its magic:
    $
 
 There's no output!  That's normal, and it means all the examples worked.  Pass
-``-v`` to the script, and :mod:`doctest` prints a detailed log of what
+``-v`` to the script, and :mod:`!doctest` prints a detailed log of what
 it's trying, and prints a summary at the end:
 
 .. code-block:: shell-session
@@ -130,7 +125,7 @@ And so on, eventually ending with:
    Test passed.
    $
 
-That's all you need to know to start making productive use of :mod:`doctest`!
+That's all you need to know to start making productive use of :mod:`!doctest`!
 Jump in.  The following sections provide full details.  Note that there are many
 examples of doctests in the standard Python test suite and libraries.
 Especially useful examples can be found in the standard test file
@@ -252,7 +247,7 @@ For more information on :func:`testfile`, see section :ref:`doctest-basic-api`.
 Command-line Usage
 ------------------
 
-The :mod:`doctest` module can be invoked as a script from the command line:
+The :mod:`!doctest` module can be invoked as a script from the command line:
 
 .. code-block:: bash
 
@@ -450,7 +445,7 @@ The fine print:
 What's the Execution Context?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default, each time :mod:`doctest` finds a docstring to test, it uses a
+By default, each time :mod:`!doctest` finds a docstring to test, it uses a
 *shallow copy* of :mod:`!M`'s globals, so that running tests doesn't change the
 module's real globals, and so that one test in :mod:`!M` can't leave behind
 crumbs that accidentally allow another test to work.  This means examples can
@@ -730,7 +725,7 @@ The second group of options controls how test failures are reported:
 
 
 There is also a way to register new option flag names, though this isn't
-useful unless you intend to extend :mod:`doctest` internals via subclassing:
+useful unless you intend to extend :mod:`!doctest` internals via subclassing:
 
 
 .. function:: register_optionflag(name)
@@ -833,7 +828,7 @@ disabling an option via ``-`` in a directive can be useful.
 Warnings
 ^^^^^^^^
 
-:mod:`doctest` is serious about requiring exact matches in expected output.  If
+:mod:`!doctest` is serious about requiring exact matches in expected output.  If
 even a single character doesn't match, the test fails.  This will probably
 surprise you a few times, as you learn exactly what Python does and doesn't
 guarantee about output.  For example, when printing a set, Python doesn't
@@ -1035,7 +1030,7 @@ Unittest API
 ------------
 
 As your collection of doctest'ed modules grows, you'll want a way to run all
-their doctests systematically.  :mod:`doctest` provides two functions that can
+their doctests systematically.  :mod:`!doctest` provides two functions that can
 be used to create :mod:`unittest` test suites from modules and text files
 containing doctests.  To integrate with :mod:`unittest` test discovery, include
 a :ref:`load_tests <load_tests-protocol>` function in your test module::
@@ -1057,12 +1052,15 @@ from text files and modules with doctests:
    Convert doctest tests from one or more text files to a
    :class:`unittest.TestSuite`.
 
-   The returned :class:`unittest.TestSuite` is to be run by the unittest framework
-   and runs the interactive examples in each file.  If an example in any file
-   fails, then the synthesized unit test fails, and a :exc:`~unittest.TestCase.failureException`
-   exception is raised showing the name of the file containing the test and a
-   (sometimes approximate) line number.  If all the examples in a file are
-   skipped, then the synthesized unit test is also marked as skipped.
+   The returned :class:`unittest.TestSuite` is to be run by the unittest
+   framework and runs the interactive examples in each file.
+   Each file is run as a separate unit test, and each example in a file
+   is run as a :ref:`subtest <subtests>`.
+   If any example in a file fails, then the synthesized unit test fails.
+   The traceback for failure or error contains the name of the file
+   containing the test and a (sometimes approximate) line number.
+   If all the examples in a file are skipped, then the synthesized unit
+   test is also marked as skipped.
 
    Pass one or more paths (as strings) to text files to be examined.
 
@@ -1120,18 +1118,23 @@ from text files and modules with doctests:
    The global ``__file__`` is added to the globals provided to doctests loaded
    from a text file using :func:`DocFileSuite`.
 
+   .. versionchanged:: 3.15
+      Run each example as a :ref:`subtest <subtests>`.
+
 
 .. function:: DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None, setUp=None, tearDown=None, optionflags=0, checker=None)
 
    Convert doctest tests for a module to a :class:`unittest.TestSuite`.
 
-   The returned :class:`unittest.TestSuite` is to be run by the unittest framework
-   and runs each doctest in the module.
-   Each docstring is run as a separate unit test.
-   If any of the doctests fail, then the synthesized unit test fails,
-   and a :exc:`unittest.TestCase.failureException` exception is raised
-   showing the name of the file containing the test and a (sometimes approximate)
-   line number.  If all the examples in a docstring are skipped, then the
+   The returned :class:`unittest.TestSuite` is to be run by the unittest
+   framework and runs each doctest in the module.
+   Each docstring is run as a separate unit test, and each example in
+   a docstring is run as a :ref:`subtest <subtests>`.
+   If any of the doctests fail, then the synthesized unit test fails.
+   The traceback for failure or error contains the name of the file
+   containing the test and a (sometimes approximate) line number.
+   If all the examples in a docstring are skipped, then the
+   synthesized unit test is also marked as skipped.
 
    Optional argument *module* provides the module to be tested.  It can be a module
    object or a (possibly dotted) module name.  If not specified, the module calling
@@ -1156,6 +1159,9 @@ from text files and modules with doctests:
       :func:`DocTestSuite` returns an empty :class:`unittest.TestSuite` if *module*
       contains no docstrings instead of raising :exc:`ValueError`.
 
+   .. versionchanged:: 3.15
+      Run each example as a :ref:`subtest <subtests>`.
+
 Under the covers, :func:`DocTestSuite` creates a :class:`unittest.TestSuite` out
 of :class:`!doctest.DocTestCase` instances, and :class:`!DocTestCase` is a
 subclass of :class:`unittest.TestCase`. :class:`!DocTestCase` isn't documented
@@ -1168,7 +1174,7 @@ of :class:`!DocTestCase`.
 
 So both ways of creating a :class:`unittest.TestSuite` run instances of
 :class:`!DocTestCase`.  This is important for a subtle reason: when you run
-:mod:`doctest` functions yourself, you can control the :mod:`!doctest` options in
+:mod:`!doctest` functions yourself, you can control the :mod:`!doctest` options in
 use directly, by passing option flags to :mod:`!doctest` functions.  However, if
 you're writing a :mod:`unittest` framework, :mod:`!unittest` ultimately controls
 when and how tests get run.  The framework author typically wants to control
@@ -1176,13 +1182,13 @@ when and how tests get run.  The framework author typically wants to control
 options), but there's no way to pass options through :mod:`!unittest` to
 :mod:`!doctest` test runners.
 
-For this reason, :mod:`doctest` also supports a notion of :mod:`!doctest`
+For this reason, :mod:`!doctest` also supports a notion of :mod:`!doctest`
 reporting flags specific to :mod:`unittest` support, via this function:
 
 
 .. function:: set_unittest_reportflags(flags)
 
-   Set the :mod:`doctest` reporting flags to use.
+   Set the :mod:`!doctest` reporting flags to use.
 
    Argument *flags* takes the :ref:`bitwise OR <bitwise>` of option flags.  See
    section :ref:`doctest-options`.  Only "reporting flags" can be used.
@@ -1518,7 +1524,7 @@ DocTestRunner objects
    with strings that should be displayed.  It defaults to ``sys.stdout.write``.  If
    capturing the output is not sufficient, then the display output can be also
    customized by subclassing DocTestRunner, and overriding the methods
-   :meth:`report_start`, :meth:`report_success`,
+   :meth:`report_skip`, :meth:`report_start`, :meth:`report_success`,
    :meth:`report_unexpected_exception`, and :meth:`report_failure`.
 
    The optional keyword argument *checker* specifies the :class:`OutputChecker`
@@ -1541,6 +1547,19 @@ DocTestRunner objects
    :meth:`summarize` methods return a :class:`TestResults` instance.
 
    :class:`DocTestRunner` defines the following methods:
+
+
+   .. method:: report_skip(out, test, example)
+
+      Report that the given example was skipped.  This method is provided to
+      allow subclasses of :class:`DocTestRunner` to customize their output; it
+      should not be called directly.
+
+      *example* is the example about to be processed.  *test* is the test
+      containing *example*.  *out* is the output function that was passed to
+      :meth:`DocTestRunner.run`.
+
+      .. versionadded:: 3.15
 
 
    .. method:: report_start(out, test, example)
@@ -1899,7 +1918,7 @@ There are two exceptions that may be raised by :class:`DebugRunner` instances:
 Soapbox
 -------
 
-As mentioned in the introduction, :mod:`doctest` has grown to have three primary
+As mentioned in the introduction, :mod:`!doctest` has grown to have three primary
 uses:
 
 #. Checking examples in docstrings.
@@ -1917,7 +1936,7 @@ this that needs to be learned---it may not be natural at first.  Examples should
 add genuine value to the documentation.  A good example can often be worth many
 words. If done with care, the examples will be invaluable for your users, and
 will pay back the time it takes to collect them many times over as the years go
-by and things change.  I'm still amazed at how often one of my :mod:`doctest`
+by and things change.  I'm still amazed at how often one of my :mod:`!doctest`
 examples stops working after a "harmless" change.
 
 Doctest also makes an excellent tool for regression testing, especially if you

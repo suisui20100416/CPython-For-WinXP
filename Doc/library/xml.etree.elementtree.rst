@@ -4,20 +4,18 @@
 .. module:: xml.etree.ElementTree
    :synopsis: Implementation of the ElementTree API.
 
-.. moduleauthor:: Fredrik Lundh <fredrik@pythonware.com>
-
 **Source code:** :source:`Lib/xml/etree/ElementTree.py`
 
 --------------
 
-The :mod:`xml.etree.ElementTree` module implements a simple and efficient API
+The :mod:`!xml.etree.ElementTree` module implements a simple and efficient API
 for parsing and creating XML data.
 
 .. versionchanged:: 3.3
    This module will use a fast implementation whenever available.
 
 .. deprecated:: 3.3
-   The :mod:`!xml.etree.cElementTree` module is deprecated.
+   The :mod:`!xml.etree.cElementTree` alias of this module is deprecated.
 
 
 .. note::
@@ -28,7 +26,7 @@ for parsing and creating XML data.
 Tutorial
 --------
 
-This is a short tutorial for using :mod:`xml.etree.ElementTree` (``ET`` in
+This is a short tutorial for using :mod:`!xml.etree.ElementTree` (``ET`` in
 short).  The goal is to demonstrate some of the building blocks and basic
 concepts of the module.
 
@@ -162,8 +160,37 @@ some storage device.  In such cases, blocking reads are unacceptable.
 Because it's so flexible, :class:`XMLPullParser` can be inconvenient to use for
 simpler use-cases.  If you don't mind your application blocking on reading XML
 data but would still like to have incremental parsing capabilities, take a look
-at :func:`iterparse`.  It can be useful when you're reading a large XML document
-and don't want to hold it wholly in memory.
+at :func:`iterparse`.
+
+Note that both parsers build the tree incrementally: it is not freed
+incrementally, so every parsed element is kept until the whole document is
+read.  To keep the memory usage low, get rid of the data which is not needed
+any more.
+
+If the processed elements are large, it is enough to clear them.
+This works wherever they are in the tree,
+but the emptied elements are left in it::
+
+   for event, elem in ET.iterparse(source):
+       if elem.tag == 'record':
+           process(elem)
+           elem.clear()
+
+If an element has a large number of children,
+remove the processed children from it::
+
+   for event, elem in ET.iterparse(source, events=('start', 'end')):
+       if event == 'start' and elem.tag == 'parent':
+           parent = elem
+       elif event == 'end' and elem.tag == 'child':
+           process(elem)
+           parent.remove(elem)
+
+These examples are not universal,
+they only give an idea for two common cases.
+If you do not need a tree at all,
+parse with :class:`XMLParser` and a custom target instead;
+it is not built then, and nothing has to be removed.
 
 Where *immediate* feedback through events is wanted, calling method
 :meth:`XMLPullParser.flush` can help reduce delay;
@@ -637,6 +664,10 @@ Functions
    for applications where blocking reads can't be made.  For fully non-blocking
    parsing, see :class:`XMLPullParser`.
 
+   The tree is only built incrementally, it is not freed incrementally:
+   every parsed element is kept until the whole document is read.
+   See :ref:`elementtree-pull-parsing` for how to keep the memory usage low.
+
    .. note::
 
       :func:`iterparse` only guarantees that it has seen the ">" character of a
@@ -655,6 +686,10 @@ Functions
 
    .. versionchanged:: 3.13
       Added the :meth:`!close` method.
+
+   .. versionchanged:: 3.15
+      A :exc:`ResourceWarning` is now emitted if the iterator opened a file
+      and is not explicitly closed.
 
 
 .. function:: parse(source, parser=None)
@@ -689,7 +724,7 @@ Functions
    .. versionadded:: 3.2
 
 
-.. function:: SubElement(parent, tag, attrib={}, **extra)
+.. function:: SubElement(parent, tag, /, attrib={}, **extra)
 
    Subelement factory.  This function creates an element instance, and appends
    it to an existing element.
@@ -699,6 +734,12 @@ Functions
    the subelement name.  *attrib* is an optional dictionary, containing element
    attributes.  *extra* contains additional attributes, given as keyword
    arguments.  Returns an element instance.
+
+   .. versionchanged:: 3.15
+      *attrib* can now be a :class:`frozendict`.
+
+   .. versionchanged:: 3.15
+      *parent* and *tag* are now positional-only parameters.
 
 
 .. function:: tostring(element, encoding="us-ascii", method="xml", *, \
@@ -791,7 +832,7 @@ Here's an example that demonstrates use of the XInclude module. To include an XM
 
 By default, the **href** attribute is treated as a file name. You can use custom loaders to override this behaviour. Also note that the standard helper does not support XPointer syntax.
 
-To process this file, load it as usual, and pass the root element to the :mod:`xml.etree.ElementTree` module:
+To process this file, load it as usual, and pass the root element to the :mod:`!xml.etree.ElementTree` module:
 
 .. code-block:: python
 
@@ -875,7 +916,7 @@ Element Objects
    :noindex:
    :no-index:
 
-.. class:: Element(tag, attrib={}, **extra)
+.. class:: Element(tag, /, attrib={}, **extra)
 
    Element class.  This class defines the Element interface, and provides a
    reference implementation of this interface.
@@ -884,6 +925,12 @@ Element Objects
    bytestrings or Unicode strings.  *tag* is the element name.  *attrib* is
    an optional dictionary, containing element attributes.  *extra* contains
    additional attributes, given as keyword arguments.
+
+   .. versionchanged:: 3.15
+      *attrib* can now be a :class:`frozendict`.
+
+   .. versionchanged:: 3.15
+      *tag* is now a positional-only parameter.
 
 
    .. attribute:: tag
@@ -1398,10 +1445,10 @@ XMLParser Objects
       Disabling reparse deferral has security consequences; please see
       :meth:`xml.parsers.expat.xmlparser.SetReparseDeferralEnabled` for details.
 
-      Note that :meth:`flush` has been backported to some prior releases of
-      CPython as a security fix.  Check for availability of :meth:`flush`
-      using :func:`hasattr` if used in code running across a variety of Python
-      versions.
+      :meth:`!flush`
+      has been backported to some prior releases of CPython as a security fix.
+      Check for availability using :func:`hasattr` if used in code running
+      across a variety of Python versions.
 
       .. versionadded:: 3.13
 
@@ -1476,10 +1523,10 @@ XMLPullParser Objects
       Disabling reparse deferral has security consequences; please see
       :meth:`xml.parsers.expat.xmlparser.SetReparseDeferralEnabled` for details.
 
-      Note that :meth:`flush` has been backported to some prior releases of
-      CPython as a security fix.  Check for availability of :meth:`flush`
-      using :func:`hasattr` if used in code running across a variety of Python
-      versions.
+      :meth:`!flush`
+      has been backported to some prior releases of CPython as a security fix.
+      Check for availability using :func:`hasattr` if used in code running
+      across a variety of Python versions.
 
       .. versionadded:: 3.13
 

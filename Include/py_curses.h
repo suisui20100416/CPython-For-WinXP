@@ -36,6 +36,13 @@
 #define NCURSES_OPAQUE 0
 #endif
 
+/* PDCurses exposes its ncurses-compatible mouse API, the one this module uses,
+   only when this is defined before the curses header is included below.
+   Ignored by other curses implementations. */
+#ifndef PDC_NCMOUSE
+#  define PDC_NCMOUSE
+#endif
+
 #if defined(HAVE_NCURSESW_NCURSES_H)
 #  include <ncursesw/ncurses.h>
 #elif defined(HAVE_NCURSESW_CURSES_H)
@@ -108,6 +115,13 @@ static void **PyCurses_API;
 /* general error messages */
 static const char catchall_ERR[]  = "curses function returned ERR";
 static const char catchall_NULL[] = "curses function returned NULL";
+
+#if defined(CURSES_MODULE) || defined(CURSES_PANEL_MODULE)
+/* Error messages shared by the curses package */
+#  define CURSES_ERROR_FORMAT           "%s() returned %s"
+#  define CURSES_ERROR_VERBOSE_FORMAT   "%s() (called by %s()) returned %s"
+#  define CURSES_ERROR_MUST_CALL_FORMAT "must call %s() first"
+#endif
 
 #ifdef __cplusplus
 }

@@ -94,6 +94,11 @@ WIN32 is still required for the locale module.
 #endif
 #endif /* Py_BUILD_CORE || Py_BUILD_CORE_BUILTIN || Py_BUILD_CORE_MODULE */
 
+/* _DEBUG implies Py_DEBUG */
+#ifdef _DEBUG
+#  define Py_DEBUG 1
+#endif
+
 /* Define to 1 when compiling for experimental free-threaded builds */
 #ifdef Py_GIL_DISABLED
 /* We undefine if it was set to zero because all later checks are #ifdef.
@@ -113,7 +118,7 @@ WIN32 is still required for the locale module.
 /* Microsoft C defines _MSC_VER, as does clang-cl.exe */
 #ifdef _MSC_VER
 
-/* We want COMPILER to expand to a string containing _MSC_VER's *value*.
+/* We want _Py_COMPILER to expand to a string containing _MSC_VER's *value*.
  * This is horridly tricky, because the stringization operator only works
  * on macro arguments, and doesn't evaluate macros passed *as* arguments.
  */
@@ -143,32 +148,44 @@ WIN32 is still required for the locale module.
 #define MS_WIN64
 #endif
 
-/* set the COMPILER and support tier
+#ifdef __clang__
+#define _Py_CLANG_COMPILER(platform) ( \
+   "[Clang " _Py_STRINGIZE(__clang_major__) "." _Py_STRINGIZE(__clang_minor__) \
+   "." _Py_STRINGIZE(__clang_patchlevel__) " " platform \
+   " with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
+#endif
+
+/* set the _Py_COMPILER and support tier
  *
  * win_amd64 MSVC (x86_64-pc-windows-msvc): 1
  * win32 MSVC (i686-pc-windows-msvc): 1
  * win_arm64 MSVC (aarch64-pc-windows-msvc): 3
- * other archs and ICC: 0
+ * other archs and clang-cl/ICC: 0
  */
 #ifdef MS_WIN64
 #if defined(_M_X64) || defined(_M_AMD64)
 #if defined(__clang__)
-#define COMPILER ("[Clang " __clang_version__ "] 64 bit (AMD64) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
+#define _Py_COMPILER _Py_CLANG_COMPILER("64 bit (AMD64)")
 #define PY_SUPPORT_TIER 0
 #elif defined(__INTEL_COMPILER)
-#define COMPILER ("[ICC v." _Py_STRINGIZE(__INTEL_COMPILER) " 64 bit (amd64) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
+#define _Py_COMPILER ("[ICC v." _Py_STRINGIZE(__INTEL_COMPILER) " 64 bit (amd64) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
 #define PY_SUPPORT_TIER 0
 #else
-#define COMPILER _Py_PASTE_VERSION("64 bit (AMD64)")
+#define _Py_COMPILER _Py_PASTE_VERSION("64 bit (AMD64)")
 #define PY_SUPPORT_TIER 1
 #endif /* __clang__ */
 #define PYD_PLATFORM_TAG "win_amd64"
 #elif defined(_M_ARM64)
-#define COMPILER _Py_PASTE_VERSION("64 bit (ARM64)")
+#if defined(__clang__)
+#define _Py_COMPILER _Py_CLANG_COMPILER("64 bit (ARM64)")
+#define PY_SUPPORT_TIER 0
+#else
+#define _Py_COMPILER _Py_PASTE_VERSION("64 bit (ARM64)")
 #define PY_SUPPORT_TIER 3
+#endif /* __clang__ */
 #define PYD_PLATFORM_TAG "win_arm64"
 #else
-#define COMPILER _Py_PASTE_VERSION("64 bit (Unknown)")
+#define _Py_COMPILER _Py_PASTE_VERSION("64 bit (Unknown)")
 #define PY_SUPPORT_TIER 0
 #endif
 #endif /* MS_WIN64 */
@@ -228,22 +245,22 @@ typedef _W64 int Py_ssize_t;
 #if defined(MS_WIN32) && !defined(MS_WIN64)
 #if defined(_M_IX86)
 #if defined(__clang__)
-#define COMPILER ("[Clang " __clang_version__ "] 32 bit (Intel) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
+#define _Py_COMPILER _Py_CLANG_COMPILER("32 bit (Intel)")
 #define PY_SUPPORT_TIER 0
 #elif defined(__INTEL_COMPILER)
-#define COMPILER ("[ICC v." _Py_STRINGIZE(__INTEL_COMPILER) " 32 bit (Intel) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
+#define _Py_COMPILER ("[ICC v." _Py_STRINGIZE(__INTEL_COMPILER) " 32 bit (Intel) with MSC v." _Py_STRINGIZE(_MSC_VER) " CRT]")
 #define PY_SUPPORT_TIER 0
 #else
-#define COMPILER _Py_PASTE_VERSION("32 bit (Intel)")
+#define _Py_COMPILER _Py_PASTE_VERSION("32 bit (Intel)")
 #define PY_SUPPORT_TIER 1
 #endif /* __clang__ */
 #define PYD_PLATFORM_TAG "win32"
 #elif defined(_M_ARM)
-#define COMPILER _Py_PASTE_VERSION("32 bit (ARM)")
+#define _Py_COMPILER _Py_PASTE_VERSION("32 bit (ARM)")
 #define PYD_PLATFORM_TAG "win_arm32"
 #define PY_SUPPORT_TIER 0
 #else
-#define COMPILER _Py_PASTE_VERSION("32 bit (Unknown)")
+#define _Py_COMPILER _Py_PASTE_VERSION("32 bit (Unknown)")
 #define PY_SUPPORT_TIER 0
 #endif
 #endif /* MS_WIN32 && !MS_WIN64 */
@@ -281,7 +298,7 @@ typedef int pid_t;
 #warning "Please use an up-to-date version of gcc! (>2.91 recommended)"
 #endif
 
-#define COMPILER "[gcc]"
+#define _Py_COMPILER "[gcc]"
 #define PY_LONG_LONG long long
 #define PY_LLONG_MIN LLONG_MIN
 #define PY_LLONG_MAX LLONG_MAX
@@ -294,7 +311,7 @@ typedef int pid_t;
 /* XXX These defines are likely incomplete, but should be easy to fix.
    They should be complete enough to build extension modules. */
 
-#define COMPILER "[lcc-win32]"
+#define _Py_COMPILER "[lcc-win32]"
 typedef int pid_t;
 /* __declspec() is supported here too - do nothing to get the defaults */
 
@@ -337,21 +354,23 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
                         This is relevant when using build-system generator (e.g CMake) where
                         the linking is explicitly handled */
 #                       if defined(Py_GIL_DISABLED)
-#                       if defined(_DEBUG)
-#                               pragma comment(lib,"python314t_d.lib")
-#                       elif defined(Py_LIMITED_API)
+#                       if defined(Py_DEBUG)
+#                               pragma comment(lib,"python315t_d.lib")
+#                       elif defined(Py_LIMITED_API) || defined(Py_TARGET_ABI3T)
 #                               pragma comment(lib,"python3t.lib")
 #                       else
-#                               pragma comment(lib,"python314t.lib")
-#                       endif /* _DEBUG */
+#                               pragma comment(lib,"python315t.lib")
+#                       endif /* Py_DEBUG */
 #                       else /* Py_GIL_DISABLED */
-#                       if defined(_DEBUG)
-#                               pragma comment(lib,"python314_d.lib")
+#                       if defined(Py_DEBUG)
+#                               pragma comment(lib,"python315_d.lib")
+#                       elif defined(Py_TARGET_ABI3T)
+#                               pragma comment(lib,"python3t.lib")
 #                       elif defined(Py_LIMITED_API)
 #                               pragma comment(lib,"python3.lib")
 #                       else
-#                               pragma comment(lib,"python314.lib")
-#                       endif /* _DEBUG */
+#                               pragma comment(lib,"python315.lib")
+#                       endif /* Py_DEBUG */
 #                       endif /* Py_GIL_DISABLED */
 #               endif /* _MSC_VER && !Py_NO_LINK_LIB */
 #       endif /* Py_BUILD_CORE */
@@ -393,11 +412,6 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #       endif
 #       define ALIGNOF_MAX_ALIGN_T 8
 #endif
-
-#ifdef _DEBUG
-#       define Py_DEBUG
-#endif
-
 
 #ifdef MS_WIN32
 

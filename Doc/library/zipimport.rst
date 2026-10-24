@@ -4,15 +4,13 @@
 .. module:: zipimport
    :synopsis: Support for importing Python modules from ZIP archives.
 
-.. moduleauthor:: Just van Rossum <just@letterror.com>
-
 **Source code:** :source:`Lib/zipimport.py`
 
 --------------
 
 This module adds the ability to import Python modules (:file:`\*.py`,
 :file:`\*.pyc`) and packages from ZIP-format archives. It is usually not
-needed to use the :mod:`zipimport` module explicitly; it is automatically used
+needed to use the :mod:`!zipimport` module explicitly; it is automatically used
 by the built-in :keyword:`import` mechanism for :data:`sys.path` items that are paths
 to ZIP archives.
 
@@ -29,6 +27,9 @@ Any files may be present in the ZIP archive, but importers are only invoked for
 :file:`.py` files, Python will not attempt to modify the archive by adding the
 corresponding :file:`.pyc` file, meaning that if a ZIP archive
 doesn't contain :file:`.pyc` files, importing may be rather slow.
+
+.. versionchanged:: 3.15
+   Zstandard (*zstd*) compressed zip file entries are supported.
 
 .. versionchanged:: 3.13
    ZIP64 is supported
@@ -142,17 +143,6 @@ zipimporter Objects
       :exc:`ZipImportError` if the module couldn't be found.
 
 
-   .. method:: load_module(fullname)
-
-      Load the module specified by *fullname*. *fullname* must be the fully
-      qualified (dotted) module name. Returns the imported module on success,
-      raises :exc:`ZipImportError` on failure.
-
-      .. deprecated-removed:: 3.10 3.15
-
-         Use :meth:`exec_module` instead.
-
-
    .. method:: invalidate_caches()
 
       Clear out the internal cache of information about files found within
@@ -184,7 +174,7 @@ Examples
 --------
 
 Here is an example that imports a module from a ZIP archive - note that the
-:mod:`zipimport` module is not explicitly used.
+:mod:`!zipimport` module is not explicitly used.
 
 .. code-block:: shell-session
 

@@ -12,16 +12,17 @@ set "EXT=%~dp0externals"
 set "WIX=%EXT%\windows-installer\wix-314"
 set "SRC=%~dp0."
 
-REM Build-assist Python.  The host runs an installed 3.15 runtime
-REM (C:\Program Files\Python315).  msi.props runs PythonForBuild through
-REM cmd without quoting, so use the space-free "py" launcher for MSBuild and
-REM the full path only for our own steps.
+REM Build-assist Python.  The toolchain's default is "py -3.14" but that
+REM interpreter is no longer installed on this host; the 3.15 runtime in
+REM C:\Program Files\Python315 takes over.  msi.props runs PythonForBuild
+REM through cmd without quoting, so use the space-free "py" launcher for
+REM MSBuild and the full path only for our own steps.
 set "PYAID=py"
 if not defined PYEXE set "PYEXE=py"
 
-REM BuildForRelease=true selects the clean "3.14.0" version branch in
+REM BuildForRelease=true selects the clean "3.15.0" version branch in
 REM msi.props; without it every sub-MSI stamps dev builds as
-REM "3.14.0dev<days-since-2001>" in ProductName/ProductVersion, which is
+REM "3.15.0dev<days-since-2001>" in ProductName/ProductVersion, which is
 REM what the ARP entries and the bundle progress UI then display.
 set "COMMON=/nologo /v:m /p:Platform=x86 /p:BuildForRelease=true /p:Py_OutDir=%PCBUILD% /p:ExternalsDir=%EXT%\ /p:WixInstallPath=%WIX%\ /p:PySourcePath=%SRC%\ /p:PySourceDir=%SRC%\ /p:IncludeExternals=false /p:SkipCopySSLDLL=true /p:XPBuild=true /p:PythonForBuild=%PYAID%"
 
@@ -36,19 +37,6 @@ REM vendored in Lib\ensurepip\_bundled.
 REM The console launchers are .cmd wrappers using %~dp0 so they resolve
 REM ..\python.exe at run time; ensurepip's distlib pip*.exe launchers
 REM embed the build machine's absolute interpreter path and are removed.
-REM LICENSE.txt is produced by the PCbuild regen chain during the
-REM pythoncore build; a standalone MSI rebuild has no other producer and
-REM exe.msi binds it by name, so make sure it exists up front.  The
-If not exist "%OUT%\LICENSE.txt" (
-  echo [msi] step: regenerate LICENSE.txt via PostBuildRegen
-  "%MSBUILD%" "%SRC%\PCbuild\pythoncore.vcxproj" /t:PostBuildRegen ^
-    /nologo /v:q /p:Configuration=Release /p:Platform=Win32 ^
-    /p:WindowsTargetPlatformVersion=10.0.26100.0 ^
-    /p:Py_OutDir=%PCBUILD% /p:ExternalsDir=%EXT%\ /p:PySourceDir="%SRC%\\" ^
-    /p:PySourcePath="%SRC%\\" /p:XPBuild=true /p:IncludeExternals=false ^
-    /p:GIT="" /p:PythonForBuild=%PYAID% 2>&1
-  if errorlevel 1 (echo [msi] LICENSE regen FAILED & exit /b 1)
-)
 echo [msi] step: generate pip runtime files via ensurepip
 set "PYHOME_SAVE=%PYTHONHOME%"
 set "PYTHONHOME=%SRC%"
@@ -81,10 +69,10 @@ REM Lib\venv\scripts\nt would collide with the explicit DLLs-directory
 REM components (identical target path -> identical auto GUID).
 del "%SRC%\Lib\venv\scripts\nt\venvlauncher.exe" "%SRC%\Lib\venv\scripts\nt\venvwlauncher.exe" 2>nul
 set "PYTHONHOME=%PYHOME_SAVE%"
-del /q "%OUT%\Scripts\pip.exe" "%OUT%\Scripts\pip3.exe" "%OUT%\Scripts\pip3.14.exe" 2>nul
+del /q "%OUT%\Scripts\pip.exe" "%OUT%\Scripts\pip3.exe" "%OUT%\Scripts\pip3.15.exe" 2>nul
 copy /y "%~dp0Tools\xp\pip_launcher.cmd" "%OUT%\Scripts\pip.cmd" >nul
 copy /y "%~dp0Tools\xp\pip_launcher.cmd" "%OUT%\Scripts\pip3.cmd" >nul
-copy /y "%~dp0Tools\xp\pip_launcher.cmd" "%OUT%\Scripts\pip3.14.cmd" >nul
+copy /y "%~dp0Tools\xp\pip_launcher.cmd" "%OUT%\Scripts\pip3.15.cmd" >nul
 type nul > "%OUT%\Scripts\.pip-launcher"
 
 REM pip's platformdirs SHGetKnownFolderPath fallback ships inside the
@@ -100,7 +88,7 @@ REM and patchlevel.h, so a changed PythonVersion never regenerates them;
 REM candle/light likewise treat dev-versioned outputs as up-to-date. Wipe
 REM all msi_* intermediates so ProductName/ProductVersion are always built
 REM from the current properties.
-for /d %%D in ("%SRC%\PCbuild\obj\314win32_Release\msi_*") do rd /s /q "%%D"
+for /d %%D in ("%SRC%\PCbuild\obj\315win32_Release\msi_*") do rd /s /q "%%D"
 
 for %%P in (launcher core exe lib pip path appendpath dev) do (
   echo [msi] step: %%P.wixproj
@@ -143,7 +131,7 @@ if errorlevel 1 (echo [msi] bundle FAILED & exit /b 1)
 REM snapshot and releaselocal share the same msi_python wixobj directory;
 REM snapshot compiles bundle.wxs with CompressMSI=no, so force releaselocal
 REM to recompile (CompressMSI=yes) by removing the stale wixobj files.
-del /q "%SRC%\PCbuild\obj\314win32_Release\msi_python\*.wixobj" 2>nul
+del /q "%SRC%\PCbuild\obj\315win32_Release\msi_python\*.wixobj" 2>nul
 
 echo [msi] step: bundle releaselocal.wixproj (self-contained installer)
 "%MSBUILD%" "%MSI%\bundle\releaselocal.wixproj" %COMMON% /p:BuildForRelease=true 2>&1
@@ -152,13 +140,13 @@ if errorlevel 1 (echo [msi] releaselocal FAILED & exit /b 1)
 echo [msi] step: collect artifacts into build\
 REM The WiX projects emit into $(Py_OutDir)en-us; copy the bundle and the
 REM sub-MSIs to build\ (the documented artifact location) before patching.
-if not exist "%OUT%\en-us\python-3.14.0.exe" (echo [msi] bundle output missing & exit /b 1)
-copy /y "%OUT%\en-us\python-3.14.0.exe" "%BUILD%\python-3.14.0.exe" >nul
+if not exist "%OUT%\en-us\python-3.15.0.exe" (echo [msi] bundle output missing & exit /b 1)
+copy /y "%OUT%\en-us\python-3.15.0.exe" "%BUILD%\python-3.15.0.exe" >nul
 if errorlevel 1 (echo [msi] copy bundle FAILED & exit /b 1)
 copy /y "%OUT%\en-us\*.msi" "%BUILD%\" >nul
 
 echo [msi] step: patch bundle PE subsystem to 5.1 for NT 5.1 loader
-"%PYEXE%" "%~dp0Tools\xp\patch_pe_subsys.py" "%BUILD%\python-3.14.0.exe"
+"%PYEXE%" "%~dp0Tools\xp\patch_pe_subsys.py" "%BUILD%\python-3.15.0.exe"
 if errorlevel 1 (echo [msi] patch_pe_subsys FAILED & exit /b 1)
 
 echo [msi] sub-MSI packages done

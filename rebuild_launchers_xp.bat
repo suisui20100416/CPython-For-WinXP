@@ -38,8 +38,8 @@ echo [rebuild-launchers] pylauncher...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT% ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -56,8 +56,8 @@ echo [rebuild-launchers] pywlauncher...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT% ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -74,8 +74,8 @@ echo [rebuild-launchers] venvlauncher...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT% ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^
@@ -92,8 +92,8 @@ echo [rebuild-launchers] venvwlauncher...
   /p:UseEnv=true ^
   /p:XPBuild=true ^
   /p:ExternalsDir=%EXT% ^
-  /p:PySourceDir="%SRC%\\" ^
-  /p:PySourcePath="%SRC%\\" ^
+  /p:PySourceDir="%SRC%\" ^
+  /p:PySourcePath="%SRC%\" ^
   /p:GIT="" ^
   /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" ^
   /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%" ^

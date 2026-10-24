@@ -53,7 +53,7 @@ REM  - libcrypto-3/libssl-3.dll: from the llvm-mingw OpenSSL build.
 REM  - zlib1/libtommath/tcl9dde14/tcl9registry13.dll: from the tcl nmake
 REM    output (build_tcltk_xp.bat runs first).
 echo [xp-ext] sqlite3.dll (v141_xp + Py_XP)...
-"%MSBUILD17%" "%SRC%\PCbuild\sqlite3.vcxproj" /t:Build /nologo /v:q /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:PySourceDir="%SRC%\\" /p:PySourcePath="%SRC%\\" /p:GIT="" /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%"
+"%MSBUILD17%" "%SRC%\PCbuild\sqlite3.vcxproj" /t:Build /nologo /v:q /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:PySourceDir="%SRC%\" /p:PySourcePath="%SRC%\" /p:GIT="" /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%"
 if errorlevel 1 (echo [xp-ext] sqlite3.dll FAILED & exit /b 1)
 copy /y "%EXT%\libffi-3.4.4\win32\libffi-8.dll" "%OUT%\" >nul
 copy /y "%EXT%\openssl-3.5.9-src\libcrypto-3.dll" "%OUT%\" >nul
@@ -79,19 +79,19 @@ REM SYSTEM_PROCESS_INFORMATION from NtQuerySystemInformation and relies on
 REM the 26100-SDK field layout (NumberOfThreads etc.); 7.1A headers (and
 REM the NT 5.1 kernel's actual layout) use the legacy layout without that
 REM field, so a faithful XP port needs layout-aware parsing, not a header
-REM shim. It is a 3.15 profiling tool that does not exist in 3.14, so the
-REM 3.14 XP branch simply has no such module in the build list.
+REM shim. It is a 3.15 profiling tool, not core stdlib - excluded from the
+REM XP layout (documented in STAGE-C).
 for %%M in (_asyncio _decimal _elementtree _multiprocessing _overlapped pyexpat _queue select unicodedata winsound _uuid _zoneinfo _socket _ctypes _bz2 _lzma _sqlite3 _zstd _wmi) do (
   echo [xp-ext] %%M ...
-  "%MSBUILD17%" "%SRC%\PCbuild\%%M.vcxproj" /t:Build /nologo /v:q /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeExternals=false /p:ExternalsDir=%EXT%\ /p:PySourceDir="%SRC%\\" /p:PySourcePath="%SRC%\\" /p:GIT="" /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%"
+  "%MSBUILD17%" "%SRC%\PCbuild\%%M.vcxproj" /t:Build /nologo /v:q /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeExternals=false /p:ExternalsDir=%EXT%\ /p:PySourceDir="%SRC%\" /p:PySourcePath="%SRC%\" /p:GIT="" /p:PYTHON="%PYTHON%" /p:PythonForBuild="%PYTHON%" /p:Py_IntDir="%OBJDIR%" /p:Py_OutDir="%PCBUILD%"
   if errorlevel 1 echo [xp-ext] %%M FAILED
 )
 
 echo [xp-ext] _ssl (IncludeSSL=true)...
-"%MSBUILD17%" "%SRC%\PCbuild\_ssl.vcxproj" /t:Build /nologo /v:m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeSSL=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:opensslOutDir=%EXT%\openssl-3.5.9-src\ /p:SkipCopySSLDLL=true /p:PySourceDir="%SRC%\\" /p:PySourcePath="%SRC%\\" /p:GIT="" /p:PYTHON=%PYTHON% /p:PythonForBuild=%PYTHON% /p:Py_IntDir=%OBJDIR% /p:Py_OutDir=%PCBUILD% 2>&1
+"%MSBUILD17%" "%SRC%\PCbuild\_ssl.vcxproj" /t:Build /nologo /v:m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeSSL=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:opensslOutDir=%EXT%\openssl-3.5.9-src\ /p:SkipCopySSLDLL=true /p:PySourceDir="%SRC%\" /p:PySourcePath="%SRC%\" /p:GIT="" /p:PYTHON=%PYTHON% /p:PythonForBuild=%PYTHON% /p:Py_IntDir=%OBJDIR% /p:Py_OutDir=%PCBUILD% 2>&1
 if errorlevel 1 (echo [xp-ext] _ssl FAILED & exit /b 1)
 echo [xp-ext] _hashlib (IncludeSSL=true)...
-"%MSBUILD17%" "%SRC%\PCbuild\_hashlib.vcxproj" /t:Build /nologo /v:m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeSSL=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:opensslOutDir=%EXT%\openssl-3.5.9-src\ /p:SkipCopySSLDLL=true /p:PySourceDir="%SRC%\\" /p:PySourcePath="%SRC%\\" /p:GIT="" /p:PYTHON=%PYTHON% /p:PythonForBuild=%PYTHON% /p:Py_IntDir=%OBJDIR% /p:Py_OutDir=%PCBUILD% 2>&1
+"%MSBUILD17%" "%SRC%\PCbuild\_hashlib.vcxproj" /t:Build /nologo /v:m /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v141_xp /p:WindowsTargetPlatformVersion=%SDKVER% /p:UCRTVersion=%UCRTVER% /p:UseEnv=true /p:XPBuild=true /p:IncludeSSL=true /p:IncludeExternals=true /p:BuildProjectReferences=false /p:ExternalsDir=%EXT%\ /p:opensslOutDir=%EXT%\openssl-3.5.9-src\ /p:SkipCopySSLDLL=true /p:PySourceDir="%SRC%\" /p:PySourcePath="%SRC%\" /p:GIT="" /p:PYTHON=%PYTHON% /p:PythonForBuild=%PYTHON% /p:Py_IntDir=%OBJDIR% /p:Py_OutDir=%PCBUILD% 2>&1
 if errorlevel 1 (echo [xp-ext] _hashlib FAILED & exit /b 1)
 echo [xp-ext] done
 endlocal

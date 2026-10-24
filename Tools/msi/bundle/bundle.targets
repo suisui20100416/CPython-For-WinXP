@@ -114,11 +114,7 @@
     <Target Name="BuildBootstrapApplication" BeforeTargets="BeforeBuild" Condition="'$(XPBuild)' == 'true'">
         <Message Text="Using prebuilt XP bootstrap app" Importance="high" />
         <PropertyGroup>
-            <!-- The v141_xp pythonba build lands in Py_IntDir's default
-                 $(PySourcePath)PCbuild\obj\<major><minor><arch>_$(Configuration)
-                 (msi builds don't pass Py_IntDir); derive it instead of
-                 hard-coding a version so the path follows the branch. -->
-            <BootstrapAppPath>$(PySourcePath)PCbuild\obj\$(MajorVersionNumber)$(MinorVersionNumber)$(ArchName)_$(Configuration)\msi_pythonba\PythonBA.dll</BootstrapAppPath>
+            <BootstrapAppPath>$(PySourcePath)PCbuild\obj\315win32_Release\msi_pythonba\PythonBA.dll</BootstrapAppPath>
         </PropertyGroup>
         <PropertyGroup>
             <DefineConstants>$(DefineConstants);BootstrapApp=$(BootstrapAppPath)</DefineConstants>

@@ -4,7 +4,6 @@
 .. module:: unittest.mock
    :synopsis: Mock object library.
 
-.. moduleauthor:: Michael Foord <michael@python.org>
 .. currentmodule:: unittest.mock
 
 .. versionadded:: 3.3
@@ -13,11 +12,11 @@
 
 --------------
 
-:mod:`unittest.mock` is a library for testing in Python. It allows you to
+:mod:`!unittest.mock` is a library for testing in Python. It allows you to
 replace parts of your system under test with mock objects and make assertions
 about how they have been used.
 
-:mod:`unittest.mock` provides a core :class:`Mock` class removing the need to
+:mod:`!unittest.mock` provides a core :class:`Mock` class removing the need to
 create a host of stubs throughout your test suite. After performing an
 action, you can make assertions about which methods / attributes were used
 and arguments they were called with. You can also specify return values and
@@ -33,7 +32,7 @@ Mock is designed for use with :mod:`unittest` and
 is based on the 'action -> assertion' pattern instead of 'record -> replay'
 used by many mocking frameworks.
 
-There is a backport of :mod:`unittest.mock` for earlier versions of Python,
+There is a backport of :mod:`!unittest.mock` for earlier versions of Python,
 available as :pypi:`mock` on PyPI.
 
 
@@ -346,7 +345,7 @@ the *new_callable* argument to :func:`patch`.
 
     .. method:: assert_any_call(*args, **kwargs)
 
-        assert the mock has been called with the specified arguments.
+        Assert the mock has been called with the specified arguments.
 
         The assert passes if the mock has *ever* been called, unlike
         :meth:`assert_called_with` and :meth:`assert_called_once_with` that
@@ -361,7 +360,7 @@ the *new_callable* argument to :func:`patch`.
 
     .. method:: assert_has_calls(calls, any_order=False)
 
-        assert the mock has been called with the specified calls.
+        Assert the mock has been called with the specified calls.
         The :attr:`mock_calls` list is checked for the calls.
 
         If *any_order* is false then the calls must be
@@ -919,7 +918,7 @@ object::
     exception,
   - if ``side_effect`` is an iterable, the async function will return the
     next value of the iterable, however, if the sequence of result is
-    exhausted, ``StopAsyncIteration`` is raised immediately,
+    :term:`exhausted`, ``StopAsyncIteration`` is raised immediately,
   - if ``side_effect`` is not defined, the async function will return the
     value defined by ``return_value``, hence, by default, the async function
     returns a new :class:`AsyncMock` object.
@@ -1269,7 +1268,7 @@ To remove a :attr:`~Mock.side_effect`, and return to the default behaviour, set 
         6
 
 The :attr:`~Mock.side_effect` can also be any iterable object. Repeated calls to the mock
-will return values from the iterable (until the iterable is exhausted and
+will return values from the iterable (until the iterable is :term:`exhausted` and
 a :exc:`StopIteration` is raised):
 
         >>> m = MagicMock(side_effect=[1, 2, 3])
@@ -2224,7 +2223,7 @@ return something else::
    >>> mock == 3
    True
 
-The return value of :meth:`MagicMock.__iter__` can be any iterable object and isn't
+The return value of :meth:`!__iter__` can be any iterable object and isn't
 required to be an iterator:
 
    >>> mock = MagicMock()
@@ -2540,7 +2539,7 @@ Alternatively you can just use ``vars(my_mock)`` (instance members) and
 mock_open
 ~~~~~~~~~
 
-.. function:: mock_open(mock=None, read_data=None)
+.. function:: mock_open(mock=None, read_data='')
 
    A helper function to create a mock to replace the use of :func:`open`. It works
    for :func:`open` called directly or used as a context manager.
@@ -2638,7 +2637,7 @@ unit tests. Testing everything in isolation is all fine and dandy, but if you
 don't test how your units are "wired together" there is still lots of room
 for bugs that tests might have caught.
 
-:mod:`unittest.mock` already provides a feature to help with this, called speccing. If you
+:mod:`!unittest.mock` already provides a feature to help with this, called speccing. If you
 use a class or instance as the :attr:`!spec` for a mock then you can only access
 attributes on the mock that exist on the real class:
 
@@ -2946,7 +2945,7 @@ precedence remains the same:
     >>> order_mock.get_value()
     'third'
 
-If :attr:`~Mock.side_effect` is exhausted, the order of precedence will not
+If :attr:`~Mock.side_effect` is :term:`exhausted`, the order of precedence will not
 cause a value to be obtained from the successors. Instead, ``StopIteration``
 exception is raised.
 
