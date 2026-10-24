@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+        <Package InstallerVersion="300" Compressed="yes" InstallScope="perUser" />
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+        
+        <PropertyRef Id="UpgradeTable" />
+        <PropertyRef Id="REGISTRYKEY" />
+        
+        <Feature Id="DefaultFeature" AllowAdvertise="no" Title="!(loc.Title)" Description="!(loc.Description)">
+            <ComponentGroupRef Id="lib_py" />
+            <ComponentGroupRef Id="lib_files" />
+            <ComponentGroupRef Id="lib_extensions" />
+            <ComponentGroupRef Id="lib_cat" />
+            <ComponentRef Id="OptionalFeature" />
+            <ComponentRef Id="RemoveLegacyPipLaunchers" />
+        </Feature>
+
+        <!-- xp branch: remove the pip*.exe launchers left by earlier builds.
+             Those launchers embed an absolute build-machine interpreter path;
+             the new lib.msi ships pip*.cmd wrappers instead.  The marker file
+             is the component KeyPath (a file KeyPath avoids adding another
+             registry write on the quota-limited target). -->
+        <DirectoryRef Id="Scripts">
+            <Component Id="RemoveLegacyPipLaunchers" Guid="{C1A2B3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}">
+                <File Id="PipLauncherMarker" Name=".pip-launcher"
+                      Source="!(bindpath.build)Scripts\.pip-launcher" KeyPath="yes" />
+                <RemoveFile Id="RemoveLegacyPipExe" Name="pip.exe" On="install" />
+                <RemoveFile Id="RemoveLegacyPip3Exe" Name="pip3.exe" On="install" />
+                <!-- pip3.14.exe is this branch's bundled version; the 3.15
+                     branch additionally removes pip3.15.exe there. -->
+                <RemoveFile Id="RemoveLegacyPip314Exe" Name="pip3.14.exe" On="install" />
+            </Component>
+        </DirectoryRef>
+    </Product>
+</Wix>

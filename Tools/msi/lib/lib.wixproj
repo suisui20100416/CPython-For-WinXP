@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{11367E76-3337-4602-8F1E-77DB4F370D7E}</ProjectGuid>
+        <SchemaVersion>2.0</SchemaVersion>
+        <OutputName>lib</OutputName>
+        <OutputType>Package</OutputType>
+    </PropertyGroup>
+    <Import Project="..\msi.props" />
+    <ItemGroup>
+        <Compile Include="lib.wxs" />
+        <Compile Include="lib_files.wxs" />
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="*.wxl" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- xp branch: ship Lib\tkinter, Lib\idlelib and Lib\turtledemo in
+             lib.msi.  Upstream ships them in a separate tcltk.msi package
+             (bundle packagegroup tcltk), but this branch drops tcltk.msi and
+             folds Tcl/Tk into lib.msi, so the Python-side libraries must be
+             included here too.  Lib\site-packages stays excluded (pip.msi
+             installs pip into it). -->
+        <ExcludeFolders Include="Lib\site-packages;Lib\test;Lib\tests" />
+        <InstallFiles Include="$(PySourcePath)Lib\**\*"
+                      Exclude="$(PySourcePath)Lib\**\*.pyc;
+                               $(PySourcePath)Lib\**\*.pyo;
+                               $(PySourcePath)Lib\turtle.py;
+                               @(ExcludeFolders->'$(PySourcePath)%(Identity)\*');
+                               @(ExcludeFolders->'$(PySourcePath)%(Identity)\**\*')">
+            <SourceBase>$(PySourcePath)Lib</SourceBase>
+            <Source>!(bindpath.src)Lib\</Source>
+            <TargetBase>$(PySourcePath)Lib</TargetBase>
+            <Target_>Lib\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>true</IncludeInCat>
+        </InstallFiles>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- xp branch: Tcl/Tk script libraries (from DLLs/tcl and DLLs/Tk
+             in the build output tree, built from tcl-9.0.4.0/tk-9.0.4.1
+             source).  Install them under the root tcl\tcl9.0 and tcl\tk9.0
+             directories: Tcl_FindExecutable looks for tcl<version> and
+             tk<version> there, not under DLLs. -->
+        <InstallFiles Include="$(OutDir)DLLs\tcl\**\*">
+            <SourceBase>$(OutDir)DLLs\tcl</SourceBase>
+            <Source>!(bindpath.build)DLLs\tcl\</Source>
+            <TargetBase>$(OutDir)DLLs\tcl</TargetBase>
+            <Target_>tcl\tcl9.0\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>false</IncludeInCat>
+        </InstallFiles>
+        <InstallFiles Include="$(OutDir)DLLs\Tk\**\*">
+            <SourceBase>$(OutDir)DLLs\Tk</SourceBase>
+            <Source>!(bindpath.build)DLLs\Tk\</Source>
+            <TargetBase>$(OutDir)DLLs\Tk</TargetBase>
+            <Target_>tcl\tk9.0\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>false</IncludeInCat>
+        </InstallFiles>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- xp branch: pip runtime files (site-packages + console scripts)
+             are staged from out-layout by build_msi_xp.bat and shipped in
+             lib.msi, because pip.msi is an empty marker on XP (its WixCA
+             custom action and registry KeyPath component both fail on
+             NT 5.1).  Installing them as ordinary files also means no
+             ensurepip run is needed at install time. -->
+        <InstallFiles Include="$(OutDir)Lib\site-packages\pip\**\*"
+                      Exclude="$(OutDir)Lib\site-packages\pip\**\*.pyc">
+            <SourceBase>$(OutDir)Lib\site-packages\pip</SourceBase>
+            <Source>!(bindpath.build)Lib\site-packages\pip\</Source>
+            <TargetBase>$(OutDir)Lib\site-packages\pip</TargetBase>
+            <Target_>Lib\site-packages\pip\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>false</IncludeInCat>
+        </InstallFiles>
+        <InstallFiles Include="$(OutDir)Lib\site-packages\pip-25.2.dist-info\**\*">
+            <SourceBase>$(OutDir)Lib\site-packages\pip-25.2.dist-info</SourceBase>
+            <Source>!(bindpath.build)Lib\site-packages\pip-25.2.dist-info\</Source>
+            <TargetBase>$(OutDir)Lib\site-packages\pip-25.2.dist-info</TargetBase>
+            <Target_>Lib\site-packages\pip-25.2.dist-info\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>false</IncludeInCat>
+        </InstallFiles>
+        <!-- xp branch: pip console launchers are .cmd wrappers using
+             %~dp0 so they resolve ..\python.exe relative to themselves.
+             The bundled pip.exe launchers embed an absolute build-time
+             interpreter path and fail on the target machine. -->
+        <InstallFiles Include="$(OutDir)Scripts\pip*.cmd">
+            <SourceBase>$(OutDir)Scripts</SourceBase>
+            <Source>!(bindpath.build)Scripts\</Source>
+            <TargetBase>$(OutDir)Scripts</TargetBase>
+            <Target_>Scripts\</Target_>
+            <Group>lib_py</Group>
+            <IncludeInCat>false</IncludeInCat>
+        </InstallFiles>
+    </ItemGroup>
+    
+    <Import Project="..\msi.targets" />
+</Project>

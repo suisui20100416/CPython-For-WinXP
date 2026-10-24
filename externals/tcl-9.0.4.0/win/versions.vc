@@ -1,0 +1,17 @@
+REM = This file is generated from makefile.vc 
+PKG_HTTP_VER = \
+2.10.2
+PKG_OPT_VER = \
+0.4.10
+PKG_COOKIEJAR_VER = \
+0.2.0
+PKG_TCLTEST_VER = \
+2.5.11
+PKG_MSGCAT_VER = \
+1.7.1
+PKG_PLATFORM_VER = \
+1.1.0
+PKG_SHELL_VER = \
+1.1.4
+PKG_DDE_VER = \
+PKG_REG_VER =\
